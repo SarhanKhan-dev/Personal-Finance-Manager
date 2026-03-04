@@ -1,0 +1,17 @@
+{
+  "name": "finance-manager-monorepo",
+  "private": true,
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "scripts": {
+    "dev": "npm run dev --workspace=@finance/web & npm run start:dev --workspace=@finance/api",
+    "build": "npm run build --workspaces",
+    "start": "npm run start --workspace=@finance/web",
+    "db:init": "node packages/database/scripts/db-init.js"
+  },
+  "devDependencies": {
+    "concurrently": "^9.1.2"
+  }
+}
