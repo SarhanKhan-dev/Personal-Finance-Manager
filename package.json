@@ -9,6 +9,7 @@
     "scripts": {
         "dev": "concurrently \"npm run dev --workspace=@finance/web\" \"npm run start:dev --workspace=@finance/api\"",
         "build": "npm run build --workspaces",
+        "build:api": "npm run build --workspace=@finance/shared --workspace=@finance/db --workspace=@finance/api",
         "db:generate": "npm run generate --workspace=@finance/db",
         "db:migrate": "npm run migrate --workspace=@finance/db",
         "db:seed": "npm run seed --workspace=@finance/db"
