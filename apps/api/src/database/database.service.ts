@@ -13,8 +13,13 @@ export class DatabaseService implements OnModuleInit {
     public db: LibSQLDatabase<typeof schema>;
 
     onModuleInit() {
+        const dbUrl = process.env.DATABASE_URL;
+        if (!dbUrl) {
+            console.error('CRITICAL: DATABASE_URL is not set in the environment variables!');
+        }
+
         this.client = createClient({
-            url: process.env.DATABASE_URL || 'file:local.db',
+            url: dbUrl as string,
             authToken: process.env.DATABASE_AUTH_TOKEN,
         });
         this.db = drizzle(this.client, { schema });
