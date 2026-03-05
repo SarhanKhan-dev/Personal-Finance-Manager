@@ -38,7 +38,7 @@ export default function OwnersPage() {
     }
 
     return (
-        <div className="flex flex-col h-full bg-[#FBFDFF] animate-fade-in relative CustomScrollbar overflow-y-auto">
+        <div className="flex flex-col min-h-full bg-[#FBFDFF] animate-fade-in relative">
             <TopBar
                 title="Owners"
                 fromDate={from}

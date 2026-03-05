@@ -2,11 +2,12 @@
     "name": "@finance/api",
     "version": "0.0.1",
     "private": true,
+    "main": "dist/apps/api/src/main.js",
     "scripts": {
         "build": "nest build",
-        "start": "nest start",
-        "start:dev": "nest start --watch",
-        "start:prod": "node dist/main"
+        "start": "node dist/apps/api/src/main",
+        "start:dev": "nest start --watch --exec \"node dist/apps/api/src/main\"",
+        "start:prod": "node dist/apps/api/src/main"
     },
     "dependencies": {
         "@finance/shared": "*",

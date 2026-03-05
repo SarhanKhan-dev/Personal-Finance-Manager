@@ -35,7 +35,7 @@ export default function Accounts() {
     }
 
     return (
-        <div className="p-6 lg:p-8 space-y-8 max-w-[1600px] mx-auto animate-fade-in pb-32 overflow-y-auto CustomScrollbar">
+        <div className="p-6 lg:p-8 space-y-8 max-w-[1600px] mx-auto animate-fade-in pb-32">
 
             {/* Header */}
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">

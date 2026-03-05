@@ -1,6 +1,6 @@
 import { Injectable, BadRequestException } from '@nestjs/common';
 import { DatabaseService } from '../database/database.service';
-import * as schema from '@finance/db/src/schema';
+import * as schema from '@finance/db';
 import { eq, sql, and, between, desc, or } from 'drizzle-orm';
 import { CreateTransactionRequest } from '@finance/shared';
 

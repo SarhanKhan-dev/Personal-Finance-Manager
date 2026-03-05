@@ -3,8 +3,9 @@ import { createClient, Client } from '@libsql/client';
 import { drizzle, LibSQLDatabase } from 'drizzle-orm/libsql';
 import * as schema from '@finance/db';
 
+import * as path from 'path';
 import * as dotenv from 'dotenv';
-dotenv.config();
+dotenv.config({ path: path.resolve(process.cwd(), '../../.env') });
 
 
 @Injectable()

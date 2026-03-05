@@ -76,7 +76,7 @@ export default function MerchantsPage() {
     }
 
     return (
-        <div className="flex flex-col h-full bg-[#FBFDFF] animate-fade-in relative CustomScrollbar overflow-y-auto">
+        <div className="flex flex-col min-h-full bg-[#FBFDFF] animate-fade-in relative">
             <TopBar title="Merchants" />
 
             <div className="p-6 lg:p-8 space-y-8 pb-32">
