@@ -1,7 +1,8 @@
 import { Controller, Get, Post, Delete, Body, Param, Query } from '@nestjs/common';
-
 import { TransactionsService } from './transactions.service';
 import { CreateTransactionRequest } from '@finance/shared';
+
+const DEFAULT_USER = 'default-user-id';
 
 @Controller('transactions')
 export class TransactionsController {
@@ -12,33 +13,40 @@ export class TransactionsController {
         @Query('from') from: string,
         @Query('to') to: string,
         @Query('page') page: string,
-        @Query('limit') limit: string
+        @Query('limit') limit: string,
+        @Query('type') type: string,
+        @Query('categoryId') categoryId: string,
+        @Query('merchantId') merchantId: string,
+        @Query('ownerId') ownerId: string,
+        @Query('assetId') assetId: string,
+        @Query('personId') personId: string,
     ) {
-        const userId = 'default-user-id';
         const pageNum = parseInt(page) || 1;
         const pageSize = parseInt(limit) || 20;
-
-        const { transactions, summary, count } = await this.transactionsService.findAll(userId, from, to, pageNum, pageSize);
-
-        return { transactions, summary, count, page: pageNum, pages: Math.ceil(count / pageSize) };
+        const result = await this.transactionsService.findAll(DEFAULT_USER, {
+            from, to, page: pageNum, limit: pageSize,
+            type, categoryId, merchantId, ownerId, assetId, personId
+        });
+        return { ...result, page: pageNum, pages: Math.ceil(result.count / pageSize) };
     }
-
 
     @Get(':id')
     async findOne(@Param('id') id: string) {
-        const userId = 'default-user-id';
-        return await this.transactionsService.findOne(userId, id);
+        return await this.transactionsService.findOne(DEFAULT_USER, id);
     }
 
     @Post()
     async create(@Body() req: CreateTransactionRequest) {
-        const userId = 'default-user-id';
-        return await this.transactionsService.create(userId, req);
+        return await this.transactionsService.create(DEFAULT_USER, req);
+    }
+
+    @Post(':id/void')
+    async void(@Param('id') id: string) {
+        return await this.transactionsService.void(DEFAULT_USER, id);
     }
 
     @Delete(':id')
     async remove(@Param('id') id: string) {
-        const userId = 'default-user-id';
-        return await this.transactionsService.remove(userId, id);
+        return await this.transactionsService.void(DEFAULT_USER, id);
     }
 }

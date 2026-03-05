@@ -15,18 +15,18 @@ export const TopBar = ({
     isUpdating
 }) => {
     return (
-        <header className="flex flex-col lg:flex-row lg:items-center justify-between gap-6 p-8 bg-white/50 backdrop-blur-md sticky top-0 z-20 border-b border-slate-100">
+        <header className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 p-5 md:p-6 bg-white/50 backdrop-blur-md sticky top-0 z-20 border-b border-slate-100">
             <motion.div
                 initial={{ opacity: 0, x: -20 }}
                 animate={{ opacity: 1, x: 0 }}
                 transition={{ duration: 0.5 }}
             >
-                <div className="flex items-center gap-2 text-[10px] font-black uppercase tracking-[0.2em] text-primary mb-1">
+                <div className="flex items-center gap-2 text-[9px] font-black uppercase tracking-[0.2em] text-primary mb-1">
                     <span>Main Console</span>
-                    <ChevronRight size={10} />
+                    <ChevronRight size={8} />
                     <span className="text-slate-400">Personal Ledger</span>
                 </div>
-                <h1 className="text-3xl font-black tracking-tighter text-slate-900">{title}</h1>
+                <h1 className="text-2xl font-black tracking-tighter text-slate-900">{title}</h1>
             </motion.div>
 
             <motion.div
@@ -35,11 +35,11 @@ export const TopBar = ({
                 transition={{ duration: 0.5 }}
                 className="flex flex-wrap items-center gap-4"
             >
-                <div className="flex items-center gap-2 bg-white p-1.5 rounded-2xl shadow-sm border border-slate-100">
-                    <div className="flex items-center gap-3 px-4 py-2 hover:bg-slate-50 rounded-xl transition-colors group">
-                        <Calendar size={14} className="text-slate-400 group-hover:text-primary transition-colors" />
+                <div className="flex items-center gap-2 bg-white p-1 rounded-xl shadow-sm border border-slate-100">
+                    <div className="flex items-center gap-2 px-3 py-1.5 hover:bg-slate-50 rounded-lg transition-colors group">
+                        <Calendar size={12} className="text-slate-400 group-hover:text-primary transition-colors" />
                         <div className="flex flex-col">
-                            <label className="text-[8px] font-black uppercase tracking-widest text-slate-400">Start Date</label>
+                            <label className="text-[7px] font-black uppercase tracking-widest text-slate-400">Start Date</label>
                             <input
                                 type="date"
                                 value={fromDate}
@@ -51,10 +51,10 @@ export const TopBar = ({
 
                     <div className="h-8 w-px bg-slate-100 mx-1" />
 
-                    <div className="flex items-center gap-3 px-4 py-2 hover:bg-slate-50 rounded-xl transition-colors group">
-                        <Calendar size={14} className="text-slate-400 group-hover:text-primary transition-colors" />
+                    <div className="flex items-center gap-2 px-3 py-1.5 hover:bg-slate-50 rounded-lg transition-colors group">
+                        <Calendar size={12} className="text-slate-400 group-hover:text-primary transition-colors" />
                         <div className="flex flex-col">
-                            <label className="text-[8px] font-black uppercase tracking-widest text-slate-400">End Date</label>
+                            <label className="text-[7px] font-black uppercase tracking-widest text-slate-400">End Date</label>
                             <input
                                 type="date"
                                 value={toDate}
@@ -68,12 +68,12 @@ export const TopBar = ({
                 <Button
                     onClick={onUpdate}
                     disabled={isUpdating}
-                    className="h-14 px-8 rounded-2xl bg-slate-900 text-white font-black text-xs uppercase tracking-[0.2em] flex items-center gap-3 shadow-2xl shadow-slate-900/20 hover:bg-slate-800 transition-all border-none"
+                    className="h-11 px-6 rounded-xl bg-slate-950 text-white font-black text-[9px] uppercase tracking-widest flex items-center gap-2 shadow-xl shadow-slate-950/10 hover:bg-slate-900 transition-all border-none"
                 >
                     {isUpdating ? (
-                        <Loader2 size={16} className="animate-spin" />
+                        <Loader2 size={14} className="animate-spin" />
                     ) : (
-                        <RefreshCw size={16} className="group-hover:rotate-180 transition-transform duration-500" />
+                        <RefreshCw size={14} className="group-hover:rotate-180 transition-transform duration-500" />
                     )}
                     Synchronize
                 </Button>

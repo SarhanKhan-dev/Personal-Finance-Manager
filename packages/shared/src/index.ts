@@ -4,12 +4,11 @@ import { z } from 'zod';
 export const TransactionTypeEnum = z.enum([
     'EXPENSE',
     'INCOME',
-    'TRANSFER_ASSET',
-    'TRANSFER_SOURCE',
+    'ASSET_TRANSFER',
+    'OWNERSHIP_TRANSFER',
     'LOAN_GIVEN',
     'LOAN_RECEIVED',
     'DEBT_PAYMENT',
-    'ADJUSTMENT'
 ]);
 
 export type TransactionType = z.infer<typeof TransactionTypeEnum>;
@@ -18,24 +17,30 @@ export type TransactionType = z.infer<typeof TransactionTypeEnum>;
 export const CreateTransactionSchema = z.object({
     type: TransactionTypeEnum,
     totalAmount: z.number().int().positive(),
-    occurredAt: z.string().datetime().optional().default(() => new Date().toISOString()),
+    occurredAt: z.string().optional().default(() => new Date().toISOString()),
     description: z.string().optional(),
 
-    assetId: z.string().uuid().optional(),
-    toAssetId: z.string().uuid().optional(),
+    // For INCOME / EXPENSE / LOAN_GIVEN / LOAN_RECEIVED
+    assetId: z.string().optional(),
 
-    merchantId: z.string().uuid().optional(),
+    // For ASSET_TRANSFER
+    fromAssetId: z.string().optional(),
+    toAssetId: z.string().optional(),
+
+    // For OWNERSHIP_TRANSFER
+    fromOwnerId: z.string().optional(),
+    toOwnerId: z.string().optional(),
+
+    merchantId: z.string().optional(),
     merchantName: z.string().optional(),
-    categoryId: z.string().uuid().optional(),
+    categoryId: z.string().optional(),
     categoryName: z.string().optional(),
 
+    // Owner (source) splits for expense/income/loans
     splits: z.array(z.object({
-        sourceId: z.string().uuid(),
+        sourceId: z.string(),
         amount: z.number().int().positive()
     })).optional(),
-
-    fromSourceId: z.string().uuid().optional(),
-    toSourceId: z.string().uuid().optional(),
 
     lineItems: z.array(z.object({
         label: z.string(),
@@ -44,20 +49,12 @@ export const CreateTransactionSchema = z.object({
         unitPrice: z.number().int().positive().optional()
     })).optional(),
 
+    // Inline creation helpers
     sourceName: z.string().optional(),
-    personId: z.string().uuid().optional(),
+    personId: z.string().optional(),
     personName: z.string().optional(),
-    debtId: z.string().uuid().optional(),
+    debtId: z.string().optional(),
     direction: z.enum(['RECEIVE', 'PAY']).optional()
-
-}).refine((data) => {
-    if (['EXPENSE', 'INCOME'].includes(data.type)) {
-        return !!data.assetId && !!data.splits && data.splits.length > 0;
-    }
-    return true;
-}, {
-    message: "Asset and Splits are required for Expense/Income",
-    path: ["assetId", "splits"]
 });
 
 export type CreateTransactionRequest = z.infer<typeof CreateTransactionSchema>;
@@ -74,7 +71,7 @@ export const ReportResponseSchema = z.object({
     byCategory: z.array(z.object({ categoryId: z.string(), categoryName: z.string(), amount: z.number() })),
     byMerchant: z.array(z.object({ merchantId: z.string(), merchantName: z.string(), amount: z.number() })),
     byAsset: z.array(z.object({ assetId: z.string(), assetName: z.string(), amount: z.number() })),
-    bySource: z.array(z.object({ sourceId: z.string(), sourceName: z.string(), amount: z.number() })),
+    byOwner: z.array(z.object({ ownerId: z.string(), ownerName: z.string(), amount: z.number() })),
     debts: z.object({
         receivableCreated: z.number(),
         payableCreated: z.number(),

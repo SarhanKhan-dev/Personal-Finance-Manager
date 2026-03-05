@@ -1,220 +1,239 @@
 "use client";
 
-import { useState } from "react";
-import { DownloadCloud, CalendarDays, BarChart, FileText, ArrowUpRight, ArrowDownRight, TrendingUp, PieChart, Loader2, Sparkles, Filter } from "lucide-react";
-import { Card, Stat, Badge, Button, Input } from "@/components/ui";
+import {
+    DownloadCloud, CalendarDays, BarChart, FileText, ArrowUpRight,
+    ArrowDownRight, TrendingUp, PieChart, Loader2, Sparkles,
+    Filter, Activity, LayoutGrid, Building2, Wallet, Users,
+    ChevronDown, ChevronRight, Info
+} from "lucide-react";
+import { Button, Input, Badge } from "@/components/ui";
 import { cn } from "@/lib/utils";
 import { useQuery } from "@tanstack/react-query";
-import { fetchSummary } from "@/lib/api";
-import { format, startOfMonth, endOfMonth, subMonths } from "date-fns";
+import { fetchReportRange } from "@/lib/api";
+import { motion, AnimatePresence } from "framer-motion";
+import { useDateRange } from "@/hooks/useDateRange";
+import { TopBar } from "@/components/TopBar";
 
-export default function Reports() {
-    const [range, setRange] = useState({
-        from: format(startOfMonth(new Date()), 'yyyy-MM-dd'),
-        to: format(endOfMonth(new Date()), 'yyyy-MM-dd')
+export default function ReportsPage() {
+    const { from, to, setFrom, setTo, updateRange, isUpdating } = useDateRange();
+
+    const { data: report, isLoading } = useQuery({
+        queryKey: ['reports', 'range', from, to],
+        queryFn: () => fetchReportRange(from, to),
     });
 
-    const { data: summary, isLoading } = useQuery({
-        queryKey: ['summary', range.from, range.to],
-        queryFn: () => fetchSummary(range.from, range.to)
-    });
-
-    if (isLoading) {
+    if (isLoading && !report) {
         return (
-            <div className="h-[80vh] w-full flex flex-col items-center justify-center gap-4">
-                <Loader2 className="animate-spin text-blue-600" size={40} />
-                <p className="text-slate-400 font-bold uppercase tracking-widest text-xs">Generating intelligence report...</p>
+            <div className="h-[80vh] w-full flex flex-col items-center justify-center gap-6">
+                <div className="relative">
+                    <div className="w-16 h-16 rounded-2xl border-4 border-slate-100 border-t-slate-900 animate-spin" />
+                    <div className="absolute inset-0 flex items-center justify-center">
+                        <BarChart className="text-slate-900" size={24} />
+                    </div>
+                </div>
+                <div className="text-center">
+                    <p className="text-slate-900 font-black uppercase tracking-[0.4em] text-[10px] mb-1">Generating Report</p>
+                    <p className="text-slate-400 text-[8px] font-bold uppercase tracking-widest">Analyzing your financial data...</p>
+                </div>
             </div>
         );
     }
 
-    const { totals, byCategory, byMerchant, topTransactions } = summary || {
-        totals: { income: 0, expense: 0, net: 0 },
-        byCategory: [],
-        byMerchant: [],
-        topTransactions: []
-    };
+    const { incomeItems = [], expenseItems = [], categoryBreakdown = [], merchantBreakdown = [], assetBreakdown = [], debtMovement = [] } = report || {};
 
-    const topCategory = byCategory[0]?.categoryName || 'N/A';
-    const topMerchant = byMerchant[0]?.merchantName || 'N/A';
+    const totalIncome = incomeItems.reduce((acc, i) => acc + i.amount, 0);
+    const totalExpense = expenseItems.reduce((acc, i) => acc + i.amount, 0);
+    const net = totalIncome - totalExpense;
 
     return (
-        <div className="p-10 space-y-12 max-w-[1600px] mx-auto animate-fade-in pb-32">
+        <div className="flex flex-col min-h-full bg-[#FBFDFF] animate-fade-in relative">
+            <TopBar
+                title="Reports"
+                fromDate={from}
+                toDate={to}
+                onFromChange={setFrom}
+                onToChange={setTo}
+                onUpdate={updateRange}
+                isUpdating={isUpdating}
+            />
 
-            {/* Header */}
-            <div className="flex flex-col xl:flex-row xl:items-center justify-between gap-8 border-b border-slate-50 pb-10">
-                <div className="flex items-center gap-4">
-                    <div className="w-12 h-12 rounded-xl bg-blue-50 flex items-center justify-center text-blue-600">
-                        <FileText size={28} />
-                    </div>
-                    <div>
-                        <h1 className="text-3xl font-black text-slate-800 tracking-tight uppercase">Summaries</h1>
-                        <p className="text-xs font-bold text-slate-400 tracking-wide mt-1 uppercase">Financial Intelligence Report</p>
-                    </div>
-                </div>
-
-                <div className="flex flex-col sm:flex-row items-center gap-4">
-                    <div className="flex items-center gap-2 bg-white border border-slate-200 rounded-xl px-4 h-12 shadow-sm">
-                        <CalendarDays size={18} className="text-slate-400" />
-                        <Input
-                            type="date"
-                            className="border-none h-full focus:ring-0 text-xs font-bold bg-transparent p-0"
-                            value={range.from}
-                            onChange={e => setRange({ ...range, from: e.target.value })}
-                        />
-                        <span className="text-slate-300 mx-1">—</span>
-                        <Input
-                            type="date"
-                            className="border-none h-full focus:ring-0 text-xs font-bold bg-transparent p-0"
-                            value={range.to}
-                            onChange={e => setRange({ ...range, to: e.target.value })}
-                        />
-                    </div>
-                    <div className="flex items-center gap-3 w-full sm:w-auto">
-                        <Button variant="outline" className="px-6 h-12 border-slate-200">
-                            <DownloadCloud size={16} className="mr-2" /> Export
-                        </Button>
-                    </div>
-                </div>
-            </div>
-
-            {/* AI Summary Section */}
-            <div className="relative overflow-hidden p-8 rounded-[2rem] bg-indigo-50/30 border border-indigo-100 shadow-sm">
-                <div className="absolute top-0 right-0 w-96 h-96 bg-indigo-200/20 blur-[100px] -mr-48 -mt-48 pointer-events-none" />
-                <div className="relative flex flex-col md:flex-row gap-8 items-start md:items-center">
-                    <div className="w-14 h-14 rounded-2xl bg-indigo-600 flex items-center justify-center text-white shrink-0 shadow-lg shadow-indigo-500/30">
-                        <Sparkles size={28} />
-                    </div>
-                    <div className="space-y-3 flex-1">
-                        <div className="flex items-center gap-3">
-                            <h3 className="text-sm font-black text-slate-800 uppercase tracking-widest">Executive Snapshot</h3>
-                            <Badge variant="accent" className="bg-indigo-600 text-white border-none py-1 px-3">AI GENERATED</Badge>
+            <div className="p-6 lg:p-8 space-y-8 pb-32">
+                {/* Summary Section */}
+                <motion.div
+                    initial={{ opacity: 0, y: 30 }} animate={{ opacity: 1, y: 0 }}
+                    className="relative overflow-hidden p-10 rounded-3xl bg-slate-950 text-white shadow-3xl shadow-slate-900/30 group"
+                >
+                    <div className="absolute top-[-20%] right-[-10%] w-[400px] h-[400px] bg-white/5 rounded-full blur-[100px] group-hover:scale-110 transition-transform duration-1000" />
+                    <div className="relative z-10 flex flex-col lg:flex-row gap-12 items-start lg:items-center">
+                        <div className="w-16 h-16 rounded-2xl bg-white/10 border border-white/10 flex items-center justify-center text-white shrink-0 shadow-2xl">
+                            <Sparkles size={28} className="animate-pulse" />
                         </div>
-                        <p className="text-slate-600 font-medium leading-relaxed">
-                            For this period, your total inflow was <span className="text-indigo-600 font-black">PKR {totals.income.toLocaleString()}</span> against an outflow of <span className="text-rose-600 font-black">PKR {totals.expense.toLocaleString()}</span>.
-                            The primary cost driver was <span className="text-slate-800 font-black underline decoration-indigo-300 underline-offset-4">{topCategory}</span>, while <span className="text-slate-800 font-black underline decoration-indigo-300 underline-offset-4">{topMerchant}</span>
-                            remains your most frequented vendor. Your net surplus stands at <span className={cn("font-black", totals.net >= 0 ? "text-emerald-600" : "text-rose-600")}>PKR {totals.net.toLocaleString()}</span>.
-                        </p>
+                        <div className="space-y-6 flex-1">
+                            <div className="flex items-center gap-3">
+                                <h3 className="text-[10px] font-black uppercase tracking-[0.5em] text-slate-500">Overview</h3>
+                                <div className="px-2 py-0.5 bg-emerald-500/20 text-emerald-400 rounded-lg text-[8px] font-black uppercase tracking-widest border border-emerald-500/10">SYNCED</div>
+                            </div>
+                            <p className="text-lg md:text-xl font-black text-slate-100 leading-tight tracking-tight">
+                                During this period, you earned <span className="text-emerald-400 font-black">PKR {totalIncome.toLocaleString()}</span> from <span className="underline decoration-slate-700 underline-offset-8 decoration-2">{incomeItems.length} sources</span>.
+                                Total spending was <span className="text-rose-400 font-black">PKR {totalExpense.toLocaleString()}</span>, leaving you with a net balance of <span className={cn("font-black underline decoration-2 underline-offset-8", net >= 0 ? "text-emerald-400 decoration-emerald-900" : "text-rose-400 decoration-rose-900")}>PKR {Math.abs(net).toLocaleString()}</span>.
+                                Most of your spending went to <span className="text-blue-400">{categoryBreakdown[0]?.name || 'N/A'}</span>.
+                            </p>
+                        </div>
+                    </div>
+                </motion.div>
+
+                {/* Primary Data Grids */}
+                <div className="grid grid-cols-1 xl:grid-cols-2 gap-12">
+                    {/* Categories Breakdown */}
+                    <div className="bg-white border border-slate-100 rounded-3xl shadow-2xl shadow-slate-200/40 flex flex-col">
+                        <div className="p-8 border-b border-slate-50 flex items-center justify-between">
+                            <div className="flex items-center gap-3">
+                                <div className="w-10 h-10 rounded-xl bg-slate-50 text-slate-400 flex items-center justify-center">
+                                    <LayoutGrid size={20} />
+                                </div>
+                                <div>
+                                    <h3 className="text-[11px] font-black text-slate-900 uppercase tracking-widest leading-none">Spending by Category</h3>
+                                    <p className="text-[9px] font-black text-slate-300 uppercase mt-1 tracking-widest">How you allocate your budget</p>
+                                </div>
+                            </div>
+                            <Badge className="bg-slate-50 text-slate-400 border-none font-black text-[8px] uppercase tracking-widest h-7 px-3">{categoryBreakdown.length} Categories</Badge>
+                        </div>
+                        <div className="p-8 space-y-6">
+                            {categoryBreakdown.map((cat, i) => (
+                                <div key={i} className="group">
+                                    <div className="flex justify-between items-end mb-3">
+                                        <div className="space-y-1">
+                                            <span className="text-[8px] font-black text-slate-300 uppercase tracking-widest block">CATEGORY</span>
+                                            <span className="text-base font-black text-slate-800 tracking-tighter uppercase group-hover:text-blue-600 transition-colors">{cat.name}</span>
+                                        </div>
+                                        <div className="text-right">
+                                            <span className="text-[8px] font-black text-slate-300 uppercase tracking-widest block opacity-50">{cat.percentage}% OF TOTAL</span>
+                                            <span className="text-lg font-black text-slate-950 tracking-tighter">PKR {cat.amount.toLocaleString()}</span>
+                                        </div>
+                                    </div>
+                                    <div className="h-1.5 w-full bg-slate-50 rounded-full overflow-hidden border border-slate-100/50">
+                                        <motion.div
+                                            initial={{ width: 0 }} animate={{ width: `${cat.percentage}%` }} transition={{ duration: 1.5, ease: "circOut" }}
+                                            className="h-full bg-slate-900 rounded-full shadow-lg"
+                                        />
+                                    </div>
+                                </div>
+                            ))}
+                            {categoryBreakdown.length === 0 && (
+                                <div className="py-20 text-center">
+                                    <PieChart size={48} className="mx-auto text-slate-100 mb-6" />
+                                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">No data for this period</p>
+                                </div>
+                            )}
+                        </div>
+                    </div>
+
+                    {/* Merchant / Provider Breakdown */}
+                    <div className="bg-white border border-slate-100 rounded-[3rem] shadow-2xl shadow-slate-200/40 flex flex-col">
+                        <div className="p-10 border-b border-slate-50 flex items-center justify-between">
+                            <div className="flex items-center gap-4">
+                                <div className="w-12 h-12 rounded-2xl bg-slate-50 text-slate-400 flex items-center justify-center">
+                                    <Building2 size={24} />
+                                </div>
+                                <div>
+                                    <h3 className="text-sm font-black text-slate-900 uppercase tracking-widest leading-none">Top Merchants</h3>
+                                    <p className="text-[10px] font-black text-slate-300 uppercase mt-1 tracking-widest">Where you spend most often</p>
+                                </div>
+                            </div>
+                            <Badge className="bg-slate-50 text-slate-400 border-none font-black text-[9px] uppercase tracking-widest h-8 px-4">{merchantBreakdown.length} Merchants</Badge>
+                        </div>
+                        <div className="p-10 space-y-8">
+                            {merchantBreakdown.map((m, i) => (
+                                <div key={i} className="group">
+                                    <div className="flex justify-between items-end mb-3">
+                                        <div className="space-y-1">
+                                            <span className="text-[9px] font-black text-slate-300 uppercase tracking-widest block">MERCHANT</span>
+                                            <span className="text-lg font-black text-slate-800 tracking-tighter uppercase group-hover:text-emerald-600 transition-colors">{m.name}</span>
+                                        </div>
+                                        <div className="text-right">
+                                            <span className="text-[9px] font-black text-slate-300 uppercase tracking-widest block opacity-50">{m.count} TRANSACTIONS</span>
+                                            <span className="text-xl font-black text-slate-950 tracking-tighter">PKR {m.amount.toLocaleString()}</span>
+                                        </div>
+                                    </div>
+                                    <div className="h-1.5 w-full bg-slate-50 rounded-full overflow-hidden border border-slate-100/50">
+                                        <motion.div
+                                            initial={{ width: 0 }} animate={{ width: `${(m.amount / totalExpense) * 100}%` }} transition={{ duration: 1.5, ease: "circOut" }}
+                                            className="h-full bg-slate-400 rounded-full shadow-lg"
+                                        />
+                                    </div>
+                                </div>
+                            ))}
+                            {merchantBreakdown.length === 0 && (
+                                <div className="py-20 text-center">
+                                    <Users size={48} className="mx-auto text-slate-100 mb-6" />
+                                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">No data for this period</p>
+                                </div>
+                            )}
+                        </div>
+                    </div>
+                </div>
+
+                {/* Additional Insights Strip */}
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-12">
+                    {/* Asset Impact */}
+                    <div className="bg-white border border-slate-100 rounded-[3rem] p-10 shadow-xl shadow-slate-200/30">
+                        <div className="flex items-center gap-4 mb-8">
+                            <div className="w-10 h-10 rounded-xl bg-blue-50 text-blue-500 flex items-center justify-center">
+                                <Wallet size={20} />
+                            </div>
+                            <h3 className="text-[10px] font-black uppercase tracking-[0.4em] text-slate-400">Spending by Account</h3>
+                        </div>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            {assetBreakdown.map((a, i) => (
+                                <div key={i} className="p-6 bg-slate-50 rounded-2xl border border-slate-100/50 group hover:bg-white hover:shadow-xl transition-all">
+                                    <span className="text-[8px] font-black text-slate-300 uppercase tracking-tighter block mb-1">ACCOUNT: {a.type}</span>
+                                    <span className="text-sm font-black text-slate-900 group-hover:text-blue-600 transition-colors block leading-tight">{a.name}</span>
+                                    <div className="mt-4 text-xl font-black text-slate-950 tracking-tighter">PKR {a.amount.toLocaleString()}</div>
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+
+                    {/* Debt Management Overview */}
+                    <div className="bg-white border border-slate-100 rounded-[3rem] p-10 shadow-xl shadow-slate-200/30">
+                        <div className="flex items-center gap-4 mb-8">
+                            <div className="w-10 h-10 rounded-xl bg-rose-50 text-rose-500 flex items-center justify-center">
+                                <Activity size={20} />
+                            </div>
+                            <h3 className="text-[10px] font-black uppercase tracking-[0.4em] text-slate-400">Debt Activity</h3>
+                        </div>
+                        <div className="space-y-4">
+                            {debtMovement.map((d, i) => (
+                                <div key={i} className="flex items-center justify-between p-4 bg-slate-50/50 rounded-2xl group">
+                                    <div className="flex items-center gap-4">
+                                        <div className={cn("w-12 h-12 rounded-xl flex items-center justify-center", d.type === 'LENT' || d.type === 'RECEIVED_BACK' ? 'bg-emerald-50 text-emerald-500' : 'bg-rose-50 text-rose-500')}>
+                                            {d.type === 'LENT' ? <ArrowUpRight size={20} /> : <ArrowDownLeft size={20} />}
+                                        </div>
+                                        <div>
+                                            <span className="text-xs font-black text-slate-900 uppercase tracking-tight block">{d.entity}</span>
+                                            <span className="text-[8px] font-black text-slate-400 uppercase tracking-widest">{d.type} Action</span>
+                                        </div>
+                                    </div>
+                                    <div className="text-right">
+                                        <span className="text-base font-black text-slate-900 tracking-tighter block">PKR {d.amount.toLocaleString()}</span>
+                                    </div>
+                                </div>
+                            ))}
+                            {debtMovement.length === 0 && (
+                                <div className="py-12 text-center text-slate-200">
+                                    <Info className="mx-auto mb-2 opacity-30" size={32} />
+                                    <p className="text-[9px] font-black uppercase tracking-widest">No debt activity found</p>
+                                </div>
+                            )}
+                        </div>
                     </div>
                 </div>
             </div>
 
-            {/* Main Stats */}
-            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-8">
-                <Stat
-                    title="Revenue Inflow"
-                    amount={totals.income}
-                    icon={ArrowUpRight}
-                    colorClass="emerald"
-                    trendLabel="Gross Monthly Income"
-                />
-                <Stat
-                    title="Economic Outflow"
-                    amount={totals.expense}
-                    icon={ArrowDownRight}
-                    colorClass="rose"
-                    trendLabel="System Liquidity Drain"
-                />
-                <Stat
-                    title="Net Liquidity"
-                    amount={totals.net}
-                    icon={TrendingUp}
-                    colorClass="blue"
-                    trendLabel="Operational Surplus"
-                />
-                <Stat
-                    title="Audit Count"
-                    amount={topTransactions.length}
-                    icon={Sparkles}
-                    colorClass="amber"
-                    trendLabel="Total Items Scanned"
-                    isCurrency={false}
-                />
+            {/* Footer Control Strip */}
+            <div className="mt-auto px-10 py-6 border-t border-slate-50 bg-[#fcfdfe] text-center">
+                <p className="text-[9px] font-black text-slate-300 uppercase tracking-[0.5em]">Financial Report - End of Page</p>
             </div>
-
-
-            {/* Categorical & Vendor Split */}
-            <div className="grid grid-cols-1 xl:grid-cols-2 gap-12">
-                <BreakdownCard
-                    title="Sectoral Distribution"
-                    data={byCategory}
-                    type="category"
-                    accentColor="bg-blue-500"
-                />
-                <BreakdownCard
-                    title="Vendor Analysis"
-                    data={byMerchant}
-                    type="merchant"
-                    accentColor="bg-amber-500"
-                />
-            </div>
-
         </div>
     );
 }
-
-function BreakdownCard({ title, data, type, accentColor }) {
-    const total = data.reduce((acc, curr) => acc + curr.amount, 0);
-
-    return (
-        <div className="dashboard-card overflow-hidden">
-            <div className="p-8 border-b border-slate-50 flex items-center justify-between bg-[#fcfdfe]">
-                <div className="flex items-center gap-4">
-                    <div className={cn("w-1.5 h-6 rounded-full", accentColor)} />
-                    <h3 className="text-[11px] font-black uppercase tracking-[0.25em] text-slate-800">{title}</h3>
-                </div>
-                <div className="flex items-center gap-2">
-                    <Badge variant="outline" className="border-slate-200 text-slate-400 font-black">{data.length} Nodes</Badge>
-                </div>
-            </div>
-
-            <div className="p-8 space-y-6">
-                {data.length > 0 ? data.sort((a, b) => b.amount - a.amount).slice(0, 8).map((item, i) => {
-                    const percentage = ((item.amount / (total || 1)) * 100).toFixed(0);
-                    const label = type === 'category' ? item.categoryName : item.merchantName;
-
-                    return (
-                        <div key={i} className="group cursor-default">
-                            <div className="flex justify-between items-end mb-3">
-                                <div className="space-y-1">
-                                    <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest block">{type} NODE</span>
-                                    <span className="text-sm font-black text-slate-700 group-hover:text-blue-600 transition-colors uppercase tracking-tight">{label || 'Unassigned'}</span>
-                                </div>
-                                <div className="text-right">
-                                    <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest block opacity-50">{percentage}% SHARE</span>
-                                    <span className="text-base font-black text-slate-900 tracking-tighter">
-                                        <span className="text-[10px] mr-1">PKR</span>
-                                        {item.amount.toLocaleString()}
-                                    </span>
-                                </div>
-                            </div>
-                            <div className="w-full bg-slate-50 rounded-full h-2 overflow-hidden border border-slate-100/50">
-                                <motion.div
-                                    initial={{ width: 0 }}
-                                    animate={{ width: `${percentage}%` }}
-                                    transition={{ duration: 1, ease: "easeOut" }}
-                                    className={cn("h-full rounded-full shadow-sm", accentColor)}
-                                />
-                            </div>
-                        </div>
-                    );
-                }) : (
-                    <div className="py-20 text-center space-y-4">
-                        <div className="w-16 h-16 bg-slate-50 rounded-full flex items-center justify-center mx-auto text-slate-200">
-                            <PieChart size={32} />
-                        </div>
-                        <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">No data records found for this sector</p>
-                    </div>
-                )}
-            </div>
-
-            {/* View More Button */}
-            {data.length > 8 && (
-                <div className="p-6 bg-slate-50 border-t border-slate-100 text-center">
-                    <button className="text-[10px] font-black uppercase tracking-[0.3em] text-slate-400 hover:text-blue-600 transition-colors">Expand Intelligence Report</button>
-                </div>
-            )}
-        </div>
-    );
-}
-

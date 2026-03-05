@@ -1,18 +1,37 @@
-import { Controller, Get, Post, Patch, Delete, Body, Param } from '@nestjs/common';
+import { Controller, Get, Query, Param } from '@nestjs/common';
 import { DebtsService } from './debts.service';
+
+const DEFAULT_USER = 'default-user-id';
 
 @Controller('debts')
 export class DebtsController {
     constructor(private readonly debtsService: DebtsService) { }
 
+    @Get('summary')
+    async getSummary() {
+        return await this.debtsService.getSummary(DEFAULT_USER);
+    }
+
+    @Get('receivables')
+    async getReceivables(@Query('page') page: string, @Query('pageSize') pageSize: string) {
+        return await this.debtsService.getReceivables(DEFAULT_USER, parseInt(page) || 1, parseInt(pageSize) || 20);
+    }
+
+    @Get('payables')
+    async getPayables(@Query('page') page: string, @Query('pageSize') pageSize: string) {
+        return await this.debtsService.getPayables(DEFAULT_USER, parseInt(page) || 1, parseInt(pageSize) || 20);
+    }
+
+    @Get('person/:personId')
+    async getPersonTimeline(@Param('personId') personId: string) {
+        return await this.debtsService.getPersonTimeline(DEFAULT_USER, personId);
+    }
+
     @Get()
     async findAll() {
-        const userId = 'default-user-id';
-        const { debts, stats } = await this.debtsService.findAll(userId);
-
-        const receivables = stats.find(s => s.kind === 'RECEIVABLE');
-        const payables = stats.find(s => s.kind === 'PAYABLE');
-
+        const { debts, stats } = await this.debtsService.findAll(DEFAULT_USER);
+        const receivables = stats.find((s: any) => s.kind === 'RECEIVABLE');
+        const payables = stats.find((s: any) => s.kind === 'PAYABLE');
         return {
             debts,
             summary: {
@@ -26,25 +45,6 @@ export class DebtsController {
 
     @Get(':id')
     async findOne(@Param('id') id: string) {
-        const userId = 'default-user-id';
-        return await this.debtsService.findOne(userId, id);
-    }
-
-    @Post()
-    async create(@Body() body: any) {
-        const userId = 'default-user-id';
-        return await this.debtsService.create(userId, body);
-    }
-
-    @Patch(':id')
-    async update(@Param('id') id: string, @Body() body: any) {
-        const userId = 'default-user-id';
-        return await this.debtsService.update(userId, id, body);
-    }
-
-    @Delete(':id')
-    async remove(@Param('id') id: string) {
-        const userId = 'default-user-id';
-        return await this.debtsService.remove(userId, id);
+        return await this.debtsService.findOne(DEFAULT_USER, id);
     }
 }

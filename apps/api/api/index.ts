@@ -7,7 +7,7 @@ let cachedApp: any;
 export default async (req: any, res: any) => {
     if (!cachedApp) {
         const app = await NestFactory.create(AppModule);
-        app.enableCors();
+        app.enableCors({ origin: true, credentials: true });
         await app.init();
         cachedApp = app.getHttpAdapter().getInstance();
     }

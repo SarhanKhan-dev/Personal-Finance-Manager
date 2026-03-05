@@ -1,10 +1,10 @@
-import { Inter, Outfit } from "next/font/google";
+import { Inter, Montserrat } from "next/font/google";
 import "./globals.css";
 import AppShell from "@/components/AppShell";
 import Providers from "@/components/Providers";
 
 const inter = Inter({ subsets: ["latin"], variable: '--font-inter' });
-const outfit = Outfit({ subsets: ["latin"], variable: '--font-outfit' });
+const montserrat = Montserrat({ subsets: ["latin"], variable: '--font-montserrat', weight: ['400', '700', '900'] });
 
 export const metadata = {
     title: "CM ANALYTICS | Executive Dashboard",
@@ -13,8 +13,8 @@ export const metadata = {
 
 export default function RootLayout({ children }) {
     return (
-        <html lang="en" className={`${inter.variable} ${outfit.variable}`}>
-            <body className="bg-[#fcfdfe] text-slate-800 min-h-screen flex text-sm overflow-hidden antialiased">
+        <html lang="en" className={`${inter.variable} ${montserrat.variable}`}>
+            <body className="bg-[#fcfdfe] text-slate-800 min-h-screen flex text-sm antialiased">
                 <Providers>
                     <AppShell>
                         {children}

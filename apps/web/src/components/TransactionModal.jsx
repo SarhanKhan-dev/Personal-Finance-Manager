@@ -1,47 +1,69 @@
 "use client";
 
-import { useState } from "react";
-import { X, Plus, Trash2, Receipt, Wallet, CreditCard, Coins, Loader2, ArrowUpCircle, ArrowDownCircle, Users, Activity } from "lucide-react";
-import { Button, Input, Label } from "./ui";
+import { useState, useEffect } from "react";
+import {
+    X, Plus, Trash2, Receipt, Wallet, CreditCard, Coins,
+    Loader2, ArrowUpCircle, ArrowDownCircle, Users, Activity,
+    Repeat, ArrowRightLeft, UserCircle, ShieldCheck, Zap,
+    CheckCircle2, Info, Building2, Store, Tags, Calendar
+} from "lucide-react";
+import { Button, Input, Label, Badge } from "./ui";
 import { motion, AnimatePresence } from "framer-motion";
 import { cn } from "@/lib/utils";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { fetchAssets, createTransaction } from "@/lib/api";
+import { fetchAssets, fetchOwners, fetchPeople, createTransaction, fetchCategories, fetchMerchants } from "@/lib/api";
 import { format } from "date-fns";
 
 export default function TransactionModal({ isOpen, onClose, onSuccess }) {
     const queryClient = useQueryClient();
 
-    // Data
-    const { data: assets = [] } = useQuery({ queryKey: ['assets'], queryFn: fetchAssets });
+    // Data Fetching
+    const { data: assets = [] } = useQuery({ queryKey: ['assets'], queryFn: fetchAssets, enabled: isOpen });
+    const { data: owners = [] } = useQuery({ queryKey: ['owners'], queryFn: fetchOwners, enabled: isOpen });
+    const { data: people = [] } = useQuery({ queryKey: ['people'], queryFn: () => fetchPeople(), enabled: isOpen });
+    const { data: categories = [] } = useQuery({ queryKey: ['categories'], queryFn: fetchCategories, enabled: isOpen });
+    const { data: merchants = [] } = useQuery({ queryKey: ['merchants'], queryFn: fetchMerchants, enabled: isOpen });
 
-    // State
-    const [txType, setTxType] = useState('EXPENSE'); // EXPENSE, INCOME, LOAN_GIVEN, LOAN_RECEIVED
+    // Core State
+    const [txType, setTxType] = useState('EXPENSE');
     const [amount, setAmount] = useState("");
-    const [assetId, setAssetId] = useState("");
     const [occurredAt, setOccurredAt] = useState(format(new Date(), "yyyy-MM-dd"));
     const [description, setDescription] = useState("");
 
-    // Dynamic fields
-    const [sourceName, setSourceName] = useState("");
+    // Entity State
+    const [assetId, setAssetId] = useState("");
+    const [fromAssetId, setFromAssetId] = useState("");
+    const [toAssetId, setToAssetId] = useState("");
+    const [fromOwnerId, setFromOwnerId] = useState("");
+    const [toOwnerId, setToOwnerId] = useState("");
+    const [personId, setPersonId] = useState("");
+
+    // Metadata State
     const [categoryName, setCategoryName] = useState("");
     const [merchantName, setMerchantName] = useState("");
-    const [personName, setPersonName] = useState("");
 
-    // Line items (for expense)
-    const [lineItems, setLineItems] = useState([]);
+    // Allocation State
+    const [splits, setSplits] = useState([]);
+    const [debtDirection, setDebtDirection] = useState('LEND'); // LEND, BORROW, PAY_BACK, RECEIVE_BACK
+
+    useEffect(() => {
+        if (!isOpen) return;
+        if (assets.length > 0 && !assetId) setAssetId(assets[0].id);
+        if (owners.length > 0 && splits.length === 0) {
+            setSplits([{ sourceId: owners[0].id, amount: "" }]);
+        }
+    }, [isOpen, assets, owners]);
 
     const resetForm = () => {
         setTxType('EXPENSE');
         setAmount("");
-        setAssetId("");
+        setAssetId(assets[0]?.id || "");
         setOccurredAt(format(new Date(), "yyyy-MM-dd"));
         setDescription("");
-        setSourceName("");
         setCategoryName("");
         setMerchantName("");
-        setPersonName("");
-        setLineItems([]);
+        setPersonId("");
+        setSplits(owners.length > 0 ? [{ sourceId: owners[0].id, amount: "" }] : []);
     };
 
     const mutation = useMutation({
@@ -50,227 +72,388 @@ export default function TransactionModal({ isOpen, onClose, onSuccess }) {
             queryClient.invalidateQueries({ queryKey: ['summary'] });
             queryClient.invalidateQueries({ queryKey: ['transactions'] });
             queryClient.invalidateQueries({ queryKey: ['assets'] });
+            queryClient.invalidateQueries({ queryKey: ['owners'] });
+            queryClient.invalidateQueries({ queryKey: ['debts'] });
             queryClient.invalidateQueries({ queryKey: ['reports'] });
             if (onSuccess) onSuccess();
             resetForm();
             onClose();
-        }
+        },
+        onError: (err) => alert(err.message)
     });
 
-    const isLineItemsValid = () => {
-        if (txType !== 'EXPENSE' || lineItems.length === 0) return true;
-        const totalLineAmount = lineItems.reduce((acc, item) => acc + (parseFloat(item.amount) || 0), 0);
-        return Math.abs(totalLineAmount - parseFloat(amount)) < 0.01;
-    };
-
-    const getAssetIcon = (type) => {
-        if (type === 'BANK') return <Wallet size={20} />;
-        if (type === 'CARD') return <CreditCard size={20} />;
-        return <Coins size={20} />;
-    };
-
     const txOptions = [
-        { id: 'INCOME', label: 'Income', icon: <ArrowUpCircle size={16} />, color: 'emerald' },
         { id: 'EXPENSE', label: 'Expense', icon: <ArrowDownCircle size={16} />, color: 'rose' },
-        { id: 'LOAN_RECEIVED', label: 'Debt Taken', icon: <ArrowDownCircle size={16} />, color: 'amber' },
-        { id: 'LOAN_GIVEN', label: 'Debt Given', icon: <ArrowUpCircle size={16} />, color: 'indigo' },
+        { id: 'INCOME', label: 'Income', icon: <ArrowUpCircle size={16} />, color: 'emerald' },
+        { id: 'TRANSFER', label: 'Transfer', icon: <ArrowRightLeft size={16} />, color: 'slate' },
+        { id: 'DEBT', label: 'Debt', icon: <Users size={16} />, color: 'amber' },
     ];
 
     const handleSubmit = (e) => {
         e.preventDefault();
+        const numAmount = parseFloat(amount);
+        if (!numAmount || numAmount <= 0) return alert('Enter a valid amount');
 
-        if (!assetId) return alert('Please select a payment method/asset.');
-        if (txType === 'EXPENSE' && lineItems.length > 0 && !isLineItemsValid()) {
-            return alert('The sum of line items must equal the total amount.');
-        }
-
-        const payload = {
+        let payload = {
             type: txType,
-            totalAmount: parseFloat(amount),
-            assetId,
+            totalAmount: numAmount,
             occurredAt: new Date(occurredAt).toISOString(),
             description,
         };
 
-        if (txType === 'INCOME') {
-            payload.sourceName = sourceName || 'General Income';
-        }
-        if (txType === 'EXPENSE') {
-            payload.categoryName = categoryName || 'Uncategorized';
-            payload.merchantName = merchantName || 'Unknown Merchant';
-            if (lineItems.length > 0) {
-                payload.lineItems = lineItems.map(item => ({
-                    label: item.label,
-                    amount: parseFloat(item.amount),
-                    quantity: parseFloat(item.quantity) || 1
-                }));
+        if (txType === 'TRANSFER') {
+            if (fromAssetId && toAssetId) {
+                payload.type = 'ASSET_TRANSFER';
+                payload.fromAssetId = fromAssetId;
+                payload.toAssetId = toAssetId;
+            } else if (fromOwnerId && toOwnerId) {
+                payload.type = 'OWNERSHIP_TRANSFER';
+                payload.fromOwnerId = fromOwnerId;
+                payload.toOwnerId = toOwnerId;
+            } else {
+                return alert('Identify source and destination protocols');
             }
-            // Auto-create split from salary/owned if no line item backend handles it, but backend needs splits or sourceName it seems. Wait, handled.
-            payload.splits = [{ sourceId: 'temp', amount: parseFloat(amount) }]; // Backend uses sourceName, we send dummy or remove it later if backend fails.
-            // Oh right, backend schema requires splits if EXPENSE.
-            // Let me adjust the payload for EXPENSE to bypass schema validation
-            payload.splits = [{ sourceId: '00000000-0000-0000-0000-000000000000', amount: parseFloat(amount) }];
-        }
-        if (txType === 'LOAN_RECEIVED' || txType === 'LOAN_GIVEN') {
-            payload.personName = personName || 'Unknown Person';
+        } else if (txType === 'DEBT') {
+            if (!personId) return alert('Identify associate entity');
+            payload.personId = personId;
+            if (debtDirection === 'LEND') payload.type = 'LOAN_GIVEN';
+            else if (debtDirection === 'BORROW') payload.type = 'LOAN_RECEIVED';
+            else {
+                payload.type = 'DEBT_PAYMENT';
+                payload.direction = debtDirection === 'PAY_BACK' ? 'PAY' : 'RECEIVE';
+            }
+            payload.assetId = assetId;
+            payload.splits = splits.map(s => ({ sourceId: s.sourceId, amount: parseFloat(s.amount) || numAmount }));
+        } else {
+            if (!assetId) return alert('Select instrument node');
+            payload.assetId = assetId;
+            payload.categoryName = categoryName || 'Unassigned';
+            payload.merchantName = merchantName || 'Direct Protocol';
+            payload.splits = splits.map(s => ({ sourceId: s.sourceId, amount: parseFloat(s.amount) || numAmount }));
         }
 
         mutation.mutate(payload);
     };
 
-    const addLineItem = () => setLineItems([...lineItems, { label: "", amount: "", quantity: "1" }]);
-    const updateLineItem = (index, field, value) => {
-        const updated = [...lineItems];
-        updated[index][field] = value;
-        setLineItems(updated);
-    };
-    const removeLineItem = (index) => setLineItems(lineItems.filter((_, i) => i !== index));
-
     return (
         <AnimatePresence>
             {isOpen && (
-                <div className="fixed inset-0 z-[100] flex items-center justify-center p-6">
-                    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={onClose} className="absolute inset-0 bg-slate-900/40 backdrop-blur-sm" />
+                <div className="fixed inset-0 z-[100] flex items-center justify-center p-6 lg:p-12 overflow-y-auto CustomScrollbar">
+                    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={onClose} className="fixed inset-0 bg-slate-950/80 backdrop-blur-xl" />
 
                     <motion.form
-                        initial={{ opacity: 0, scale: 0.95, y: 20 }} animate={{ opacity: 1, scale: 1, y: 0 }} exit={{ opacity: 0, scale: 0.95, y: 20 }}
+                        initial={{ opacity: 0, scale: 0.95, y: 40 }} animate={{ opacity: 1, scale: 1, y: 0 }} exit={{ opacity: 0, scale: 0.95, y: 40 }}
                         onSubmit={handleSubmit}
-                        className="relative bg-white border border-slate-100 rounded-[2rem] w-full max-w-2xl max-h-[90vh] flex flex-col shadow-2xl overflow-hidden"
+                        className="relative bg-white border border-slate-100 rounded-[4rem] w-full max-w-2xl flex flex-col shadow-[0_40px_100px_-15px_rgba(0,0,0,0.3)] overflow-hidden"
                     >
-                        {/* Header */}
-                        <div className="flex items-center justify-between p-8 border-b border-slate-50">
-                            <div className="flex items-center gap-4">
-                                <div className="w-12 h-12 rounded-xl bg-slate-50 flex items-center justify-center text-slate-900">
-                                    <Receipt size={24} />
+                        {/* Status Bar */}
+                        <div className="bg-slate-950 py-2.5 px-8 flex items-center justify-between overflow-hidden relative">
+                            <div className="flex items-center gap-3 relative z-10">
+                                <ShieldCheck size={12} className="text-emerald-400" />
+                                <span className="text-[8px] font-black text-slate-500 uppercase tracking-[0.3em]">Secure Transaction Ledger</span>
+                            </div>
+                            <div className="flex items-center gap-2 relative z-10">
+                                <div className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
+                                <span className="text-[8px] font-black text-emerald-500 uppercase tracking-widest leading-none">Live Connection</span>
+                            </div>
+                        </div>
+
+                        {/* Branding Header */}
+                        <div className="flex items-center justify-between p-10 lg:p-12 border-b border-slate-50 bg-white">
+                            <div className="flex items-center gap-5">
+                                <div className="w-14 h-14 rounded-2xl bg-slate-950 flex items-center justify-center text-white shadow-xl shadow-slate-950/20">
+                                    <Plus size={24} />
                                 </div>
                                 <div>
-                                    <h2 className="text-2xl font-black text-slate-800 tracking-tight uppercase">New Record</h2>
-                                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Financial Ledger Entry</p>
+                                    <h2 className="text-2xl font-black text-slate-950 tracking-tighter uppercase leading-none">New Entry</h2>
+                                    <p className="text-[9px] font-black text-slate-400 uppercase tracking-[0.3em] mt-2 ml-0.5">Register a financial movement</p>
                                 </div>
                             </div>
-                            <button type="button" onClick={onClose} className="w-10 h-10 bg-slate-50 hover:bg-slate-100 rounded-xl flex items-center justify-center group">
-                                <X size={20} className="text-slate-400 group-hover:rotate-90 transition-transform" />
+                            <button type="button" onClick={onClose} className="w-12 h-12 bg-slate-50 hover:bg-slate-950 hover:text-white rounded-xl flex items-center justify-center transition-all active:scale-90">
+                                <X size={20} />
                             </button>
                         </div>
 
-                        {/* Body */}
-                        <div className="p-8 overflow-y-auto flex-1 space-y-8 custom-scrollbar">
-                            {/* Transaction Type */}
-                            <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                        {/* Transaction Body */}
+                        <div className="p-10 lg:p-12 space-y-12 bg-white max-h-[60vh] overflow-y-auto CustomScrollbar">
+                            {/* Type Selector */}
+                            <div className="flex p-1.5 bg-slate-100 rounded-2xl gap-1.5 border border-slate-200/50">
                                 {txOptions.map(t => (
                                     <button
                                         key={t.id} type="button" onClick={() => setTxType(t.id)}
-                                        className={cn("flex flex-col items-center gap-2 p-4 rounded-xl border transition-all", txType === t.id ? `bg-${t.color}-50 border-${t.color}-200 text-${t.color}-600 ring-2 ring-${t.color}-500/20` : "bg-white border-slate-100 text-slate-400")}
+                                        className={cn(
+                                            "flex-1 flex flex-col items-center justify-center gap-2 py-4 rounded-xl transition-all duration-300 relative overflow-hidden",
+                                            txType === t.id
+                                                ? `bg-slate-950 text-white shadow-xl shadow-slate-950/20`
+                                                : "text-slate-400 hover:text-slate-950 hover:bg-white/50"
+                                        )}
                                     >
-                                        {t.icon}
-                                        <span className="text-[9px] font-black uppercase tracking-widest">{t.label}</span>
+                                        <div className={cn("p-1.5 rounded transition-colors")}>
+                                            {t.icon}
+                                        </div>
+                                        <span className="text-[8px] font-black uppercase tracking-widest">{t.label}</span>
                                     </button>
                                 ))}
                             </div>
 
-                            {/* Core Fields */}
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            {/* Core Quantitative Fields */}
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                                 <div className="space-y-3">
-                                    <Label className="text-[10px] font-black uppercase tracking-widest text-slate-400">Total Amount</Label>
-                                    <div className="relative">
-                                        <span className="absolute left-4 top-1/2 -translate-y-1/2 font-black text-slate-300">PKR</span>
-                                        <Input type="number" step="0.01" required value={amount} onChange={e => setAmount(e.target.value)} className="h-14 pl-14 text-2xl font-black bg-slate-50 focus:bg-white" placeholder="0.00" />
+                                    <div className="flex items-center justify-between px-2">
+                                        <Label className="text-[9px] font-black uppercase tracking-widest text-slate-400">Amount</Label>
+                                        <Badge className="bg-slate-100 text-slate-500 border-none font-black text-[9px]">PKR</Badge>
+                                    </div>
+                                    <div className="relative group">
+                                        <Input
+                                            type="number" step="0.01" required
+                                            value={amount} onChange={e => setAmount(e.target.value)}
+                                            className="h-20 pl-6 text-4xl font-black bg-slate-50 border-none rounded-2xl focus:bg-white focus:ring-4 focus:ring-slate-950/5 transition-all outline-none"
+                                            placeholder="0.00"
+                                        />
                                     </div>
                                 </div>
                                 <div className="space-y-3">
-                                    <Label className="text-[10px] font-black uppercase tracking-widest text-slate-400">Date</Label>
-                                    <Input type="date" required value={occurredAt} onChange={e => setOccurredAt(e.target.value)} className="h-14 bg-slate-50 font-black text-slate-700 focus:bg-white" />
+                                    <div className="flex items-center justify-between px-2">
+                                        <Label className="text-[9px] font-black uppercase tracking-widest text-slate-400">Date</Label>
+                                        <Calendar size={12} className="text-slate-300" />
+                                    </div>
+                                    <Input
+                                        type="date" required
+                                        value={occurredAt} onChange={e => setOccurredAt(e.target.value)}
+                                        className="h-20 bg-slate-50 border-none rounded-2xl font-black text-xl text-slate-700 focus:bg-white focus:ring-4 focus:ring-slate-950/5 px-6 outline-none"
+                                    />
                                 </div>
                             </div>
 
-                            {/* Dynamic Fields based on Type */}
-                            <div className="space-y-6 bg-slate-50/50 p-6 rounded-2xl border border-slate-100">
-                                <div className="flex items-center gap-3 mb-2">
-                                    <Activity size={16} className="text-primary" />
-                                    <h3 className="text-[11px] font-black uppercase tracking-[0.2em] text-slate-900">Entity Details</h3>
-                                </div>
-
-                                {txType === 'INCOME' && (
-                                    <div className="space-y-3">
-                                        <Label className="text-[10px] font-black uppercase tracking-widest text-slate-400">Income Source</Label>
-                                        <Input value={sourceName} onChange={e => setSourceName(e.target.value)} placeholder="e.g. Salary, Client X..." className="h-14 bg-white" required />
-                                    </div>
-                                )}
-
-                                {txType === 'EXPENSE' && (
-                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                                        <div className="space-y-3">
-                                            <Label className="text-[10px] font-black uppercase tracking-widest text-slate-400">Category</Label>
-                                            <Input value={categoryName} onChange={e => setCategoryName(e.target.value)} placeholder="e.g. Groceries, Transport..." className="h-14 bg-white" required />
+                            {/* Entity & Metadata Logic */}
+                            <AnimatePresence mode="wait">
+                                <motion.div
+                                    key={txType} initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -20 }}
+                                    className="space-y-10"
+                                >
+                                    {/* DEBT SUB-PROTOCOL */}
+                                    {txType === 'DEBT' && (
+                                        <div className="grid grid-cols-2 lg:grid-cols-4 gap-2 p-1.5 bg-amber-50/50 rounded-2xl border border-amber-100/50">
+                                            {['LEND', 'BORROW', 'PAY_BACK', 'RECEIVE_BACK'].map(d => (
+                                                <button
+                                                    key={d} type="button" onClick={() => setDebtDirection(d)}
+                                                    className={cn(
+                                                        "py-3 px-3 rounded-xl text-[8px] font-black uppercase tracking-tight transition-all",
+                                                        debtDirection === d
+                                                            ? "bg-amber-950 text-white shadow-xl shadow-amber-950/20"
+                                                            : "text-amber-700 hover:bg-white"
+                                                    )}
+                                                >
+                                                    {d.replace('_', ' ')}
+                                                </button>
+                                            ))}
                                         </div>
-                                        <div className="space-y-3">
-                                            <Label className="text-[10px] font-black uppercase tracking-widest text-slate-400">Merchant</Label>
-                                            <Input value={merchantName} onChange={e => setMerchantName(e.target.value)} placeholder="e.g. Walmart, Uber..." className="h-14 bg-white" required />
-                                        </div>
-                                    </div>
-                                )}
-
-                                {(txType === 'LOAN_GIVEN' || txType === 'LOAN_RECEIVED') && (
-                                    <div className="space-y-3">
-                                        <Label className="text-[10px] font-black uppercase tracking-widest text-slate-400">Counterparty Person</Label>
-                                        <div className="relative">
-                                            <Users size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" />
-                                            <Input value={personName} onChange={e => setPersonName(e.target.value)} placeholder="Name of person..." className="h-14 pl-12 bg-white" required />
-                                        </div>
-                                    </div>
-                                )}
-
-                                <div className="space-y-3">
-                                    <Label className="text-[10px] font-black uppercase tracking-widest text-slate-400">Description / Note</Label>
-                                    <Input value={description} onChange={e => setDescription(e.target.value)} placeholder="Optional note..." className="h-12 bg-white" />
-                                </div>
-                            </div>
-
-                            {/* Payment Method / Asset */}
-                            <div className="space-y-4">
-                                <Label className="text-[10px] font-black uppercase tracking-widest text-slate-400">Payment Instrument (Asset)</Label>
-                                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
-                                    {assets.map(a => (
-                                        <div key={a.id} onClick={() => setAssetId(a.id)} className={cn("p-4 rounded-xl border cursor-pointer flex flex-col items-center gap-2 group transition-all", assetId === a.id ? "bg-slate-900 border-slate-900 text-white" : "bg-white text-slate-400 hover:border-slate-300 hover:bg-slate-50")}>
-                                            {getAssetIcon(a.type)}
-                                            <span className="text-[9px] font-black uppercase tracking-widest truncate w-full text-center">{a.name}</span>
-                                        </div>
-                                    ))}
-                                </div>
-                            </div>
-
-                            {/* Expense Line Items */}
-                            {txType === 'EXPENSE' && (
-                                <div className="space-y-4 pt-4 border-t border-slate-100">
-                                    <div className="flex items-center justify-between">
-                                        <Label className="text-[10px] font-black uppercase tracking-widest text-slate-400">Invoice Items Breakdown</Label>
-                                        <Button type="button" variant="outline" size="sm" onClick={addLineItem} className="h-8 px-4 rounded-lg text-[9px] uppercase tracking-widest gap-2">
-                                            <Plus size={12} /> Add Item
-                                        </Button>
-                                    </div>
-
-                                    {lineItems.map((item, i) => (
-                                        <div key={i} className="flex items-center gap-3">
-                                            <Input required placeholder="Item Name" value={item.label} onChange={e => updateLineItem(i, 'label', e.target.value)} className="flex-1" />
-                                            <Input required type="number" placeholder="Qty" value={item.quantity} onChange={e => updateLineItem(i, 'quantity', e.target.value)} className="w-20" />
-                                            <Input required type="number" placeholder="Amount" value={item.amount} onChange={e => updateLineItem(i, 'amount', e.target.value)} className="w-28 text-right" />
-                                            <button type="button" onClick={() => removeLineItem(i)} className="p-3 text-rose-500 hover:bg-rose-50 rounded-lg"><Trash2 size={16} /></button>
-                                        </div>
-                                    ))}
-                                    {lineItems.length > 0 && !isLineItemsValid() && (
-                                        <p className="text-xs font-black text-rose-500 uppercase">Warning: Items sum does not match total amount.</p>
                                     )}
-                                </div>
-                            )}
 
+                                    {/* DYNAMIC FIELDSET */}
+                                    <div className="bg-slate-50/50 p-8 rounded-3xl border border-slate-100 space-y-8 relative overflow-hidden group/form">
+                                        <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-transparent via-slate-900/10 to-transparent" />
+
+                                        <div className="flex items-center gap-3 mb-2">
+                                            <div className="w-9 h-9 rounded-lg bg-white border border-slate-100 flex items-center justify-center text-slate-950 shadow-sm">
+                                                <Activity size={16} />
+                                            </div>
+                                            <h3 className="text-[10px] font-black uppercase tracking-widest text-slate-950">Movement Details</h3>
+                                        </div>
+
+                                        {/* Primary Identity Row */}
+                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                                            {txType === 'DEBT' && (
+                                                <div className="space-y-3">
+                                                    <Label className="text-[8px] font-black uppercase tracking-widest text-slate-400 ml-2">Person</Label>
+                                                    <select
+                                                        value={personId} onChange={e => setPersonId(e.target.value)} required
+                                                        className="w-full h-14 bg-white border-slate-100 rounded-xl px-6 font-black text-slate-700 focus:ring-4 focus:ring-slate-950/5 outline-none appearance-none cursor-pointer text-xs"
+                                                    >
+                                                        <option value="">Select Person</option>
+                                                        {people.map(p => <option key={p.id} value={p.id}>{p.name.toUpperCase()}</option>)}
+                                                    </select>
+                                                </div>
+                                            )}
+
+                                            {['INCOME', 'EXPENSE', 'DEBT'].includes(txType) && (
+                                                <div className="space-y-3">
+                                                    <Label className="text-[8px] font-black uppercase tracking-widest text-slate-400 ml-2">Account / Asset</Label>
+                                                    <select
+                                                        value={assetId} onChange={e => setAssetId(e.target.value)} required
+                                                        className="w-full h-14 bg-white border-slate-100 rounded-xl px-6 font-black text-slate-700 focus:ring-4 focus:ring-slate-950/5 outline-none appearance-none cursor-pointer text-xs"
+                                                    >
+                                                        {assets.map(a => <option key={a.id} value={a.id}>{a.name.toUpperCase()} ({a.type})</option>)}
+                                                    </select>
+                                                </div>
+                                            )}
+
+                                            {txType === 'TRANSFER' && (
+                                                <>
+                                                    <div className="space-y-3">
+                                                        <Label className="text-[8px] font-black uppercase tracking-widest text-slate-400 ml-2">From</Label>
+                                                        <select
+                                                            onChange={e => {
+                                                                const val = e.target.value;
+                                                                if (val.startsWith('asset:')) { setFromAssetId(val.split(':')[1]); setFromOwnerId(""); }
+                                                                else { setFromOwnerId(val.split(':')[1]); setFromAssetId(""); }
+                                                            }}
+                                                            className="w-full h-14 bg-white border-slate-100 rounded-xl px-6 font-black text-slate-700 outline-none appearance-none text-xs"
+                                                        >
+                                                            <option value="">Origin</option>
+                                                            <optgroup label="Assets">
+                                                                {assets.map(a => <option key={a.id} value={`asset:${a.id}`}>{a.name.toUpperCase()}</option>)}
+                                                            </optgroup>
+                                                            <optgroup label="Owners">
+                                                                {owners.map(o => <option key={o.id} value={`owner:${o.id}`}>{o.name.toUpperCase()}</option>)}
+                                                            </optgroup>
+                                                        </select>
+                                                    </div>
+                                                    <div className="space-y-3">
+                                                        <Label className="text-[8px] font-black uppercase tracking-widest text-slate-400 ml-2">To</Label>
+                                                        <select
+                                                            onChange={e => {
+                                                                const val = e.target.value;
+                                                                if (val.startsWith('asset:')) { setToAssetId(val.split(':')[1]); setToOwnerId(""); }
+                                                                else { setToOwnerId(val.split(':')[1]); setToAssetId(""); }
+                                                            }}
+                                                            className="w-full h-14 bg-white border-slate-100 rounded-xl px-6 font-black text-slate-700 outline-none appearance-none text-xs"
+                                                        >
+                                                            <option value="">Destination</option>
+                                                            <optgroup label="Assets">
+                                                                {assets.map(a => <option key={a.id} value={`asset:${a.id}`}>{a.name.toUpperCase()}</option>)}
+                                                            </optgroup>
+                                                            <optgroup label="Owners">
+                                                                {owners.map(o => <option key={o.id} value={`owner:${o.id}`}>{o.name.toUpperCase()}</option>)}
+                                                            </optgroup>
+                                                        </select>
+                                                    </div>
+                                                </>
+                                            )}
+                                        </div>
+
+                                        {/* Classification Metadata */}
+                                        {['EXPENSE'].includes(txType) && (
+                                            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                                                <div className="space-y-3">
+                                                    <div className="flex items-center gap-2 ml-2">
+                                                        <Tags size={12} className="text-slate-300" />
+                                                        <Label className="text-[8px] font-black uppercase tracking-widest text-slate-400">Category</Label>
+                                                    </div>
+                                                    <select
+                                                        value={categoryName} onChange={e => setCategoryName(e.target.value)}
+                                                        className="w-full h-14 bg-white border-slate-100 rounded-xl px-6 font-black text-slate-700 outline-none appearance-none text-xs"
+                                                    >
+                                                        <option value="">Select Category</option>
+                                                        {categories.map(c => <option key={c.id} value={c.name}>{c.name.toUpperCase()}</option>)}
+                                                    </select>
+                                                </div>
+                                                <div className="space-y-3">
+                                                    <div className="flex items-center gap-2 ml-2">
+                                                        <Store size={12} className="text-slate-300" />
+                                                        <Label className="text-[8px] font-black uppercase tracking-widest text-slate-400">Merchant / Vendor</Label>
+                                                    </div>
+                                                    <select
+                                                        value={merchantName} onChange={e => setMerchantName(e.target.value)}
+                                                        className="w-full h-14 bg-white border-slate-100 rounded-xl px-6 font-black text-slate-700 outline-none appearance-none text-xs"
+                                                    >
+                                                        <option value="">None / Direct</option>
+                                                        {merchants.map(m => <option key={m.id} value={m.name}>{m.name.toUpperCase()}</option>)}
+                                                    </select>
+                                                </div>
+                                            </div>
+                                        )}
+
+                                        {/* Ownership Attribution Splits */}
+                                        {['INCOME', 'EXPENSE', 'DEBT'].includes(txType) && (
+                                            <div className="space-y-6 pt-8 border-t border-slate-100/50">
+                                                <div className="flex items-center justify-between px-2">
+                                                    <div className="flex items-center gap-3">
+                                                        <ShieldCheck size={14} className="text-emerald-500" />
+                                                        <Label className="text-[9px] font-black uppercase tracking-widest text-slate-900">Ownership Attribution</Label>
+                                                    </div>
+                                                    <Button type="button" variant="outline" size="sm" onClick={() => setSplits([...splits, { sourceId: owners[0]?.id, amount: "" }])} className="h-8 px-4 rounded-xl text-[8px] uppercase font-black bg-white border-slate-200 hover:bg-slate-950 hover:text-white transition-all">
+                                                        <Plus size={12} className="mr-2" /> ADD SPLIT
+                                                    </Button>
+                                                </div>
+                                                <div className="space-y-4">
+                                                    {splits.map((s, i) => (
+                                                        <motion.div initial={{ opacity: 0, x: -10 }} animate={{ opacity: 1, x: 0 }} key={i} className="flex gap-3 items-center">
+                                                            <div className="flex-1 bg-white rounded-xl overflow-hidden border border-slate-100 flex items-center px-4 gap-3 h-14">
+                                                                <UserCircle size={18} className="text-slate-300" />
+                                                                <select
+                                                                    value={s.sourceId} onChange={e => {
+                                                                        const n = [...splits];
+                                                                        n[i].sourceId = e.target.value;
+                                                                        setSplits(n);
+                                                                    }}
+                                                                    className="flex-1 h-full bg-transparent font-black text-slate-700 outline-none appearance-none cursor-pointer uppercase text-[10px]"
+                                                                >
+                                                                    {owners.map(o => <option key={o.id} value={o.id}>{o.name.toUpperCase()}</option>)}
+                                                                </select>
+                                                            </div>
+                                                            <div className="w-32 relative group/val">
+                                                                <Input
+                                                                    placeholder="AUTO"
+                                                                    value={s.amount} onChange={e => {
+                                                                        const n = [...splits];
+                                                                        n[i].amount = e.target.value;
+                                                                        setSplits(n);
+                                                                    }}
+                                                                    className="h-14 px-4 font-black bg-white border-slate-100 rounded-xl focus:ring-4 focus:ring-slate-950/5 transition-all outline-none text-xs"
+                                                                />
+                                                            </div>
+                                                            {splits.length > 1 && (
+                                                                <button type="button" onClick={() => setSplits(splits.filter((_, idx) => idx !== i))} className="w-14 h-14 bg-rose-50 border border-rose-100 rounded-xl flex items-center justify-center text-rose-300 hover:bg-rose-600 hover:text-white hover:border-rose-600 transition-all active:scale-90">
+                                                                    <Trash2 size={16} />
+                                                                </button>
+                                                            )}
+                                                        </motion.div>
+                                                    ))}
+                                                </div>
+                                            </div>
+                                        )}
+
+                                        <div className="space-y-3">
+                                            <div className="flex items-center gap-3 px-2">
+                                                <Info size={12} className="text-slate-300" />
+                                                <Label className="text-[8px] font-black uppercase tracking-widest text-slate-400">Description</Label>
+                                            </div>
+                                            <Input
+                                                value={description} onChange={e => setDescription(e.target.value)}
+                                                placeholder="Add details..."
+                                                className="h-14 pl-6 font-black bg-white border-slate-100 rounded-xl focus:bg-white focus:ring-4 focus:ring-slate-950/5 transition-all outline-none text-slate-600 text-xs"
+                                            />
+                                        </div>
+                                    </div>
+                                </motion.div>
+                            </AnimatePresence>
                         </div>
 
-                        {/* Footer */}
-                        <div className="p-8 border-t border-slate-50 bg-[#fcfdfe] flex items-center justify-end gap-4">
-                            <Button type="button" variant="ghost" className="h-14 px-8 rounded-xl font-black text-slate-400 uppercase tracking-widest" onClick={onClose}>Cancel</Button>
-                            <Button type="submit" disabled={mutation.isPending} className="h-14 px-12 rounded-xl bg-slate-900 text-white font-black uppercase tracking-widest shadow-xl">
-                                {mutation.isPending ? <Loader2 className="animate-spin" /> : 'Record Transaction'}
-                            </Button>
+                        {/* Control Footer */}
+                        <div className="p-8 lg:p-10 border-t border-slate-50 bg-[#FBFDFF] flex flex-col md:flex-row items-center justify-between gap-6">
+                            <div className="flex items-center gap-4">
+                                <div className="w-10 h-10 rounded-xl bg-emerald-50 flex items-center justify-center text-emerald-500 shadow-sm border border-emerald-100/50">
+                                    <CheckCircle2 size={20} />
+                                </div>
+                                <p className="text-[8px] font-black text-slate-400 uppercase tracking-widest">Double-entry verified</p>
+                            </div>
+
+                            <div className="flex gap-4 w-full md:w-auto">
+                                <Button
+                                    type="button" variant="ghost"
+                                    className="flex-1 md:flex-none h-14 px-8 rounded-xl font-black text-slate-400 uppercase tracking-widest transition-all text-[10px]"
+                                    onClick={onClose}
+                                >
+                                    Cancel
+                                </Button>
+                                <Button
+                                    type="submit" disabled={mutation.isPending}
+                                    className="flex-1 md:flex-none h-14 px-12 rounded-xl bg-slate-950 text-white font-black uppercase tracking-widest shadow-2xl shadow-slate-950/20 active:scale-95 transition-all border-none text-[10px]"
+                                >
+                                    {mutation.isPending ? <Loader2 className="animate-spin" size={16} /> : 'Save Transaction'}
+                                </Button>
+                            </div>
                         </div>
                     </motion.form>
                 </div>
@@ -278,4 +461,3 @@ export default function TransactionModal({ isOpen, onClose, onSuccess }) {
         </AnimatePresence>
     );
 }
-
