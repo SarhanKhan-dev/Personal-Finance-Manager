@@ -1,7 +1,8 @@
 import { Injectable, OnModuleInit } from '@nestjs/common';
 import { createClient, Client } from '@libsql/client';
 import { drizzle, LibSQLDatabase } from 'drizzle-orm/libsql';
-import * as schema from '@finance/db/src/schema';
+import * as schema from '@finance/db';
+
 import * as dotenv from 'dotenv';
 dotenv.config();
 

@@ -1,10 +1,15 @@
+import 'reflect-metadata';
 import { NestFactory } from '@nestjs/core';
 import { AppModule } from '../src/app.module';
 
+let cachedApp: any;
+
 export default async (req: any, res: any) => {
-    const app = await NestFactory.create(AppModule);
-    app.enableCors();
-    await app.init();
-    const instance = app.getHttpAdapter().getInstance();
-    instance(req, res);
+    if (!cachedApp) {
+        const app = await NestFactory.create(AppModule);
+        app.enableCors();
+        await app.init();
+        cachedApp = app.getHttpAdapter().getInstance();
+    }
+    return cachedApp(req, res);
 };
