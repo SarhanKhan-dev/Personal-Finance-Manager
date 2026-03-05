@@ -2,7 +2,6 @@
     "name": "@finance/api",
     "version": "0.0.1",
     "private": true,
-    "main": "dist/apps/api/src/main.js",
     "scripts": {
         "build": "nest build",
         "start": "node dist/apps/api/src/main",
