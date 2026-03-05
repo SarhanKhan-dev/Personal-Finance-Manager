@@ -14,6 +14,18 @@ import { fetchSummary } from "@/lib/api";
 import { ArrowDownRight, Wallet, TrendingUp, HandCoins, ShieldAlert } from "lucide-react";
 
 export default function Dashboard() {
+    return (
+        <React.Suspense fallback={
+            <div className="flex flex-col h-screen items-center justify-center">
+                <div className="w-16 h-16 border-4 border-slate-100 border-t-primary rounded-full animate-spin"></div>
+            </div>
+        }>
+            <DashboardContent />
+        </React.Suspense>
+    );
+}
+
+function DashboardContent() {
     const router = useRouter();
     const searchParams = useSearchParams();
     const queryClient = useQueryClient();
