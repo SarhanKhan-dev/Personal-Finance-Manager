@@ -14,14 +14,14 @@ export class DatabaseService implements OnModuleInit {
     public db: LibSQLDatabase<typeof schema>;
 
     onModuleInit() {
-        const dbUrl = process.env.DATABASE_URL;
-        if (!dbUrl) {
+        const dbUrl = process.env.DATABASE_URL || 'libsql://dummy.turso.io';
+        if (!process.env.DATABASE_URL) {
             console.error('CRITICAL: DATABASE_URL is not set in the environment variables!');
         }
 
         this.client = createClient({
-            url: dbUrl as string,
-            authToken: process.env.DATABASE_AUTH_TOKEN,
+            url: dbUrl,
+            authToken: process.env.DATABASE_AUTH_TOKEN || 'dummy',
         });
         this.db = drizzle(this.client, { schema });
     }
