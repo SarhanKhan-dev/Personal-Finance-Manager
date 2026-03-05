@@ -2,35 +2,42 @@ import React from "react";
 import { cn } from "@/lib/utils";
 import { motion } from "framer-motion";
 
-export const KpiCard = ({ title, primaryValue, primaryLabel, secondaryValue, secondaryLabel, tint = "blue" }) => {
+export const KpiCard = ({ title, primaryValue, primaryLabel, secondaryValue, secondaryLabel, tint = "blue", icon }) => {
     const themes = {
         blue: {
-            bg: "bg-blue-50/50",
-            border: "border-blue-100",
+            bg: "bg-blue-50/20",
+            border: "border-blue-100/50",
             text: "text-blue-600",
             dot: "bg-blue-500",
-            light: "bg-blue-50"
+            light: "bg-blue-100/50"
         },
         yellow: {
-            bg: "bg-amber-50/50",
-            border: "border-amber-100",
+            bg: "bg-amber-50/20",
+            border: "border-amber-100/50",
             text: "text-amber-600",
             dot: "bg-amber-500",
-            light: "bg-amber-50"
+            light: "bg-amber-100/50"
         },
-        purple: {
-            bg: "bg-violet-50/50",
-            border: "border-violet-100",
-            text: "text-violet-600",
-            dot: "bg-violet-500",
-            light: "bg-violet-50"
-        },
-        green: {
-            bg: "bg-emerald-50/50",
-            border: "border-emerald-100",
+        emerald: {
+            bg: "bg-emerald-50/20",
+            border: "border-emerald-100/50",
             text: "text-emerald-600",
             dot: "bg-emerald-500",
-            light: "bg-emerald-50"
+            light: "bg-emerald-100/50"
+        },
+        rose: {
+            bg: "bg-rose-50/20",
+            border: "border-rose-100/50",
+            text: "text-rose-600",
+            dot: "bg-rose-500",
+            light: "bg-rose-100/50"
+        },
+        purple: {
+            bg: "bg-violet-50/20",
+            border: "border-violet-100/50",
+            text: "text-violet-600",
+            dot: "bg-violet-500",
+            light: "bg-violet-100/50"
         },
     };
 
@@ -39,28 +46,28 @@ export const KpiCard = ({ title, primaryValue, primaryLabel, secondaryValue, sec
     return (
         <motion.div
             whileHover={{ y: -4, scale: 1.01 }}
-            className={cn("dashboard-card p-8 flex flex-col justify-between min-h-[180px] group transition-all duration-300 relative overflow-hidden", theme.bg, theme.border)}
+            className={cn("bg-white border border-slate-100 rounded-[2.5rem] p-8 flex flex-col justify-between min-h-[220px] group transition-all duration-300 relative overflow-hidden shadow-xl shadow-slate-200/50", theme.bg)}
         >
-            <div className="absolute top-0 right-0 p-8">
-                <div className={cn("w-2 h-2 rounded-full animate-pulse", theme.dot)} />
+            <div className="absolute top-8 right-8">
+                <div className={cn("w-12 h-12 rounded-2xl flex items-center justify-center transition-all duration-500 group-hover:scale-110", theme.light, theme.text)}>
+                    {icon || <div className={cn("w-2 h-2 rounded-full", theme.dot)} />}
+                </div>
             </div>
 
             <div className="relative z-10">
-                <h4 className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 mb-6 flex items-center gap-2">
+                <h4 className="text-[11px] font-black uppercase tracking-[0.2em] text-slate-400 mb-8 flex items-center gap-2">
                     <span className={cn("w-1 h-3 rounded-full", theme.dot)} />
                     {title}
                 </h4>
                 <div className="flex flex-col gap-1">
                     <h3 className="text-4xl font-black tracking-tighter text-slate-900 group-hover:text-primary transition-colors duration-500">
-                        {primaryValue}
+                        {typeof primaryValue === 'number' ? `$${primaryValue.toLocaleString()}` : primaryValue}
                     </h3>
-                    {primaryLabel && (
-                        <span className="text-[10px] font-black text-slate-300 uppercase tracking-widest">{primaryLabel}</span>
-                    )}
+                    <span className="text-[10px] font-black text-slate-300 uppercase tracking-widest mt-2">{primaryLabel}</span>
                 </div>
             </div>
 
-            <div className="mt-8 pt-6 border-t border-slate-200/50 flex items-center justify-between">
+            <div className="mt-8 pt-6 border-t border-slate-50 flex items-center justify-between">
                 <div className="flex flex-col">
                     <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1 leading-none">
                         {secondaryLabel}
@@ -69,11 +76,7 @@ export const KpiCard = ({ title, primaryValue, primaryLabel, secondaryValue, sec
                         {secondaryValue}
                     </span>
                 </div>
-                <div className={cn("w-10 h-10 rounded-xl flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all duration-300 translate-y-2 group-hover:translate-y-0", theme.light)}>
-                    <div className={cn("w-5 h-1 rounded-full", theme.dot)} />
-                </div>
             </div>
         </motion.div>
     );
 };
-

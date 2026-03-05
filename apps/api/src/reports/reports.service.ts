@@ -1,24 +1,22 @@
 import { Injectable } from '@nestjs/common';
 import { DatabaseService } from '../database/database.service';
-import * as schema from '@finance/db/src/schema';
-import { eq, and, between, sql } from 'drizzle-orm';
+import * as schema from '@finance/db';
+import { eq, and, between, sql, desc, or } from 'drizzle-orm';
 import { differenceInDays, parseISO } from 'date-fns';
 
 @Injectable()
 export class ReportsService {
     constructor(private readonly dbService: DatabaseService) { }
 
-    async getSummary(userId: string, from: string, to: string) {
+    async getDashboardData(userId: string, from: string, to: string) {
         const db = this.dbService.db;
 
+        // 1. Transaction Aggregates (Income vs Expense)
         const transactionsInRange = await db.query.transactions.findMany({
             where: and(
                 eq(schema.transactions.userId, userId),
-                between(schema.transactions.occurredAt, from, to),
-            ),
-            with: {
-                category: true
-            }
+                between(schema.transactions.occurredAt, from, to)
+            )
         });
 
         const incomeTxs = transactionsInRange.filter(t => t.type === 'INCOME');
@@ -27,9 +25,8 @@ export class ReportsService {
         const totalIncome = incomeTxs.reduce((acc, t) => acc + (Number(t.totalAmount) || 0), 0);
         const totalExpense = expenseTxs.reduce((acc, t) => acc + (Number(t.totalAmount) || 0), 0);
 
-        const days = Math.max(1, differenceInDays(parseISO(to), parseISO(from)) + 1);
-
-        const byCategory = await db.select({
+        // 2. Top Spending Category (for the KPIs)
+        const byCategoryRaw = await db.select({
             id: schema.transactions.categoryId,
             name: schema.categories.name,
             amount: sql<number>`sum(${schema.transactions.totalAmount})`,
@@ -42,16 +39,33 @@ export class ReportsService {
                 eq(schema.transactions.type, 'EXPENSE'),
                 between(schema.transactions.occurredAt, from, to)
             ))
-            .groupBy(schema.transactions.categoryId);
+            .groupBy(schema.transactions.categoryId)
+            .orderBy(desc(sql`sum(${schema.transactions.totalAmount})`));
 
-        // Calculate percentages for categories
-        const totalByCat = byCategory.reduce((acc, c) => acc + Number(c.amount), 0);
-        const mappedCategories = byCategory.map(c => ({
+        const topCategoryData = byCategoryRaw[0] || { name: 'None', amount: 0 };
+
+        // 3. Debts Overview
+        const debts = await db.query.debts.findMany({
+            where: eq(schema.debts.userId, userId),
+            with: { person: true }
+        });
+
+        const totalDebtPayable = debts
+            .filter(d => d.kind === 'PAYABLE')
+            .reduce((acc, d) => acc + (Number(d.outstandingAmount) || 0), 0);
+
+        const totalDebtReceivable = debts
+            .filter(d => d.kind === 'RECEIVABLE')
+            .reduce((acc, d) => acc + (Number(d.outstandingAmount) || 0), 0);
+
+        // 4. Top 5 Categories & Merchants for Tables
+        const totalExpSum = byCategoryRaw.reduce((acc, c) => acc + Number(c.amount), 0);
+        const top5Categories = byCategoryRaw.slice(0, 5).map(c => ({
             ...c,
-            percentage: totalByCat > 0 ? Math.round((Number(c.amount) / totalByCat) * 100) : 0
-        })).sort((a, b) => b.amount - a.amount).slice(0, 5);
+            percentage: totalExpSum > 0 ? Math.round((Number(c.amount) / totalExpSum) * 100) : 0
+        }));
 
-        const byMerchant = await db.select({
+        const byMerchantRaw = await db.select({
             id: schema.transactions.merchantId,
             name: schema.merchants.name,
             amount: sql<number>`sum(${schema.transactions.totalAmount})`,
@@ -64,31 +78,44 @@ export class ReportsService {
                 eq(schema.transactions.type, 'EXPENSE'),
                 between(schema.transactions.occurredAt, from, to)
             ))
-            .groupBy(schema.transactions.merchantId);
+            .groupBy(schema.transactions.merchantId)
+            .orderBy(desc(sql`sum(${schema.transactions.totalAmount})`));
 
-        const totalByMerch = byMerchant.reduce((acc, m) => acc + Number(m.amount), 0);
-        const mappedMerchants = byMerchant.map(m => ({
+        const top5Merchants = byMerchantRaw.slice(0, 5).map(m => ({
             ...m,
-            percentage: totalByMerch > 0 ? Math.round((Number(m.amount) / totalByMerch) * 100) : 0
-        })).sort((a, b) => b.amount - a.amount).slice(0, 5);
+            percentage: totalExpSum > 0 ? Math.round((Number(m.amount) / totalExpSum) * 100) : 0
+        }));
 
-        const topCategory = mappedCategories[0]?.name || 'N/A';
+        // 5. Top 5 Debts by outstanding amount
+        const top5Debts = [...debts]
+            .sort((a, b) => Number(b.outstandingAmount) - Number(a.outstandingAmount))
+            .slice(0, 5)
+            .map(d => ({
+                id: d.id,
+                entity: d.person?.name || 'Unknown',
+                kind: d.kind,
+                outstandingAmount: Number(d.outstandingAmount)
+            }));
 
         return {
-            expenses: {
-                total: totalExpense,
-                avgPerDay: Math.round(totalExpense / days)
+            summary: {
+                totalIncome,
+                totalExpense,
+                netCashflow: totalIncome - totalExpense,
+                topCategory: {
+                    name: topCategoryData.name,
+                    amount: topCategoryData.amount
+                },
+                debts: {
+                    payable: totalDebtPayable,
+                    receivable: totalDebtReceivable
+                }
             },
-            income: {
-                total: totalIncome,
-                avgPerDay: Math.round(totalIncome / days)
-            },
-            transactions: {
-                count: transactionsInRange.length,
-                topCategory
-            },
-            byCategory: mappedCategories,
-            byMerchant: mappedMerchants
+            tables: {
+                topCategories: top5Categories,
+                topMerchants: top5Merchants,
+                topDebts: top5Debts
+            }
         };
     }
 }

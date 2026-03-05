@@ -11,6 +11,7 @@ export class ReportsController {
         @Query('to') to: string,
     ) {
         const userId = 'default-user-id';
-        return await this.reportsService.getSummary(userId, from, to);
+        return await this.reportsService.getDashboardData(userId, from, to);
+
     }
 }

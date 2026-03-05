@@ -16,7 +16,15 @@
         "noImplicitAny": false,
         "strictBindCallApply": false,
         "forceConsistentCasingInFileNames": false,
-        "noFallthroughCasesInSwitch": false
+        "noFallthroughCasesInSwitch": false,
+        "paths": {
+            "@finance/shared": [
+                "../../packages/shared/src/index"
+            ],
+            "@finance/db": [
+                "../../packages/db/src/index"
+            ]
+        }
     },
     "include": [
         "src/**/*",
