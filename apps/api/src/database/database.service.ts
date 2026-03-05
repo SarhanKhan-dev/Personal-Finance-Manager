@@ -14,14 +14,11 @@ export class DatabaseService implements OnModuleInit {
     public db: LibSQLDatabase<typeof schema>;
 
     onModuleInit() {
-        const dbUrl = process.env.DATABASE_URL || 'libsql://dummy.turso.io';
-        if (!process.env.DATABASE_URL) {
-            console.error('CRITICAL: DATABASE_URL is not set in the environment variables!');
-        }
+        const dbUrl = process.env.DATABASE_URL || 'libsql://database-pink-cloud-vercel-icfg-lgry9xjonpjevzbmduopcvpa.aws-ap-northeast-1.turso.io';
 
         this.client = createClient({
             url: dbUrl,
-            authToken: process.env.DATABASE_AUTH_TOKEN || 'dummy',
+            authToken: process.env.DATABASE_AUTH_TOKEN || 'eyJhbGciOiJFZERTQSIsInR5cCI6IkpXVCJ9.eyJpYXQiOjE3NzI2MjAyMDIsImlkIjoiMDE5Y2I4NjUtYmUwMS03MzM5LTkyODYtZDUwOWVkZDJjZmZjIiwicmlkIjoiMjkyNjZmZjktMGIyNS00YmQzLWIxZTctNGI2MGNhZWQyMDViIn0.Xta06sXPijzESYhTQhPRMyJP05ZkCEDPcj_eKvOe4old0J66MEVeml3MYlenzvDRvwrp9wsvDfnMR_xcSZWyDg',
         });
         this.db = drizzle(this.client, { schema });
     }
