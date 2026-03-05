@@ -8,7 +8,8 @@
         "generate": "drizzle-kit generate",
         "migrate": "drizzle-kit migrate",
         "seed": "tsx src/seed.ts",
-        "build": "tsc"
+        "build": "tsc",
+        "prepare": "npm run build"
     },
     "dependencies": {
         "@libsql/client": "^0.14.0",

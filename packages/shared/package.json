@@ -6,7 +6,8 @@
     "types": "./dist/index.d.ts",
     "scripts": {
         "build": "tsc",
-        "dev": "tsc -w"
+        "dev": "tsc -w",
+        "prepare": "npm run build"
     },
     "dependencies": {
         "zod": "^3.24.1"
