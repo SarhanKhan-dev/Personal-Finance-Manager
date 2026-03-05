@@ -1,47 +1,94 @@
 import { Injectable } from '@nestjs/common';
 import { DatabaseService } from '../database/database.service';
+import * as schema from '@finance/db/src/schema';
+import { eq, and, between, sql } from 'drizzle-orm';
+import { differenceInDays, parseISO } from 'date-fns';
 
 @Injectable()
 export class ReportsService {
-    constructor(private db: DatabaseService) { }
+    constructor(private readonly dbService: DatabaseService) { }
 
-    async getSummary() {
-        const inflowRes = await this.db.execute("SELECT SUM(amount) as total FROM transactions WHERE type = 'inflow'");
-        const outflowRes = await this.db.execute("SELECT SUM(amount) as total FROM transactions WHERE type = 'outflow'");
+    async getSummary(userId: string, from: string, to: string) {
+        const db = this.dbService.db;
 
-        const byCategoryRes = await this.db.execute(`
-      SELECT category, SUM(amount) as total 
-      FROM transactions 
-      WHERE type = 'outflow' AND category IS NOT NULL
-      GROUP BY category 
-      ORDER BY total DESC
-    `);
+        const transactionsInRange = await db.query.transactions.findMany({
+            where: and(
+                eq(schema.transactions.userId, userId),
+                between(schema.transactions.occurredAt, from, to),
+            ),
+            with: {
+                category: true
+            }
+        });
 
-        const byAccountRes = await this.db.execute(`
-      SELECT a.name, a.color, a.type, 
-        SUM(CASE WHEN t.type = 'inflow' THEN t.amount ELSE 0 END) as total_inflow,
-        SUM(CASE WHEN t.type = 'outflow' THEN t.amount ELSE 0 END) as total_outflow
-      FROM accounts a
-      LEFT JOIN transactions t ON a.id = t.account_id
-      GROUP BY a.id
-    `);
+        const incomeTxs = transactionsInRange.filter(t => t.type === 'INCOME');
+        const expenseTxs = transactionsInRange.filter(t => t.type === 'EXPENSE');
 
-        const dailyRes = await this.db.execute(`
-      SELECT date, 
-        SUM(CASE WHEN type = 'inflow' THEN amount ELSE 0 END) as inflow,
-        SUM(CASE WHEN type = 'outflow' THEN amount ELSE 0 END) as outflow
-      FROM transactions
-      GROUP BY date
-      ORDER BY date ASC
-      LIMIT 30
-    `);
+        const totalIncome = incomeTxs.reduce((acc, t) => acc + (Number(t.totalAmount) || 0), 0);
+        const totalExpense = expenseTxs.reduce((acc, t) => acc + (Number(t.totalAmount) || 0), 0);
+
+        const days = Math.max(1, differenceInDays(parseISO(to), parseISO(from)) + 1);
+
+        const byCategory = await db.select({
+            id: schema.transactions.categoryId,
+            name: schema.categories.name,
+            amount: sql<number>`sum(${schema.transactions.totalAmount})`,
+            count: sql<number>`count(${schema.transactions.id})`
+        })
+            .from(schema.transactions)
+            .leftJoin(schema.categories, eq(schema.transactions.categoryId, schema.categories.id))
+            .where(and(
+                eq(schema.transactions.userId, userId),
+                eq(schema.transactions.type, 'EXPENSE'),
+                between(schema.transactions.occurredAt, from, to)
+            ))
+            .groupBy(schema.transactions.categoryId);
+
+        // Calculate percentages for categories
+        const totalByCat = byCategory.reduce((acc, c) => acc + Number(c.amount), 0);
+        const mappedCategories = byCategory.map(c => ({
+            ...c,
+            percentage: totalByCat > 0 ? Math.round((Number(c.amount) / totalByCat) * 100) : 0
+        })).sort((a, b) => b.amount - a.amount).slice(0, 5);
+
+        const byMerchant = await db.select({
+            id: schema.transactions.merchantId,
+            name: schema.merchants.name,
+            amount: sql<number>`sum(${schema.transactions.totalAmount})`,
+            count: sql<number>`count(${schema.transactions.id})`
+        })
+            .from(schema.transactions)
+            .leftJoin(schema.merchants, eq(schema.transactions.merchantId, schema.merchants.id))
+            .where(and(
+                eq(schema.transactions.userId, userId),
+                eq(schema.transactions.type, 'EXPENSE'),
+                between(schema.transactions.occurredAt, from, to)
+            ))
+            .groupBy(schema.transactions.merchantId);
+
+        const totalByMerch = byMerchant.reduce((acc, m) => acc + Number(m.amount), 0);
+        const mappedMerchants = byMerchant.map(m => ({
+            ...m,
+            percentage: totalByMerch > 0 ? Math.round((Number(m.amount) / totalByMerch) * 100) : 0
+        })).sort((a, b) => b.amount - a.amount).slice(0, 5);
+
+        const topCategory = mappedCategories[0]?.name || 'N/A';
 
         return {
-            inflow: inflowRes.rows[0].total || 0,
-            outflow: outflowRes.rows[0].total || 0,
-            byCategory: byCategoryRes.rows,
-            byAccount: byAccountRes.rows,
-            daily: dailyRes.rows
+            expenses: {
+                total: totalExpense,
+                avgPerDay: Math.round(totalExpense / days)
+            },
+            income: {
+                total: totalIncome,
+                avgPerDay: Math.round(totalIncome / days)
+            },
+            transactions: {
+                count: transactionsInRange.length,
+                topCategory
+            },
+            byCategory: mappedCategories,
+            byMerchant: mappedMerchants
         };
     }
 }

@@ -1,177 +1,216 @@
 "use client";
 
-import { useEffect, useState } from 'react';
 import {
-    ArrowUpRight,
-    ArrowDownLeft,
-    ArrowRightLeft,
-    Filter,
     Search,
-    Trash2,
-    ChevronLeft,
+    Filter,
+    ArrowUpRight,
+    ArrowDownRight,
+    ArrowRightLeft,
+    Calendar,
+    Download,
+    Wallet,
+    Loader2,
     ChevronRight,
-    TrendingUp,
-    TrendingDown
+    ArrowUpCircle,
+    ArrowDownCircle,
+    Repeat,
+    Trash2,
+    Plus,
+    X
 } from "lucide-react";
+import { Card, Input, Button, Badge } from "@/components/ui";
+import { motion, AnimatePresence } from "framer-motion";
+import { cn } from "@/lib/utils";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { fetchTransactions, deleteTransaction, createTransaction } from "@/lib/api";
+import { format } from "date-fns";
+import { TopBar } from "@/components/TopBar";
+import { KpiCard } from "@/components/KpiCard";
+import { useState } from "react";
 
 export default function Transactions() {
-    const [transactions, setTransactions] = useState([]);
-    const [loading, setLoading] = useState(true);
-    const [filters, setFilters] = useState({
-        search: '',
-        type: '',
-        accountId: '',
-        dateFrom: '',
-        dateTo: ''
+    const queryClient = useQueryClient();
+    const [isCreateOpen, setIsCreateOpen] = useState(false);
+
+    const { data, isLoading } = useQuery({
+        queryKey: ['transactions'],
+        queryFn: fetchTransactions
     });
-    const [accounts, setAccounts] = useState([]);
 
-    async function fetchInitialData() {
-        try {
-            const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
-            const accRes = await fetch(`${apiUrl}/accounts`);
-            setAccounts(await accRes.json());
-            fetchTransactions();
-        } catch (err) {
-            console.error(err);
+    const deleteMutation = useMutation({
+        mutationFn: deleteTransaction,
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ['transactions'] });
         }
+    });
+
+    const transactions = data?.transactions || [];
+    const summary = data?.summary || { totalVolume: 0, outflow: 0, inflow: 0, count: 0 };
+
+    if (isLoading) {
+        return (
+            <div className="h-[80vh] w-full flex flex-col items-center justify-center gap-6">
+                <div className="relative">
+                    <div className="w-20 h-20 rounded-3xl border-4 border-slate-100 border-t-primary animate-spin" />
+                    <div className="absolute inset-0 flex items-center justify-center">
+                        <Loader2 className="text-primary" size={24} />
+                    </div>
+                </div>
+                <div className="text-center">
+                    <p className="text-slate-900 font-black uppercase tracking-[0.3em] text-xs mb-1">Retrieving Ledger</p>
+                    <p className="text-slate-400 text-[10px] font-bold uppercase tracking-widest">Accessing encrypted archives...</p>
+                </div>
+            </div>
+        );
     }
-
-    async function fetchTransactions() {
-        try {
-            setLoading(true);
-            const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
-            const query = new URLSearchParams(filters).toString();
-            const res = await fetch(`${apiUrl}/transactions?${query}`);
-            setTransactions(await res.json());
-        } catch (err) {
-            console.error(err);
-        } finally {
-            setLoading(false);
-        }
-    }
-
-    useEffect(() => {
-        fetchInitialData();
-    }, []);
-
-    const handleFilterChange = (e) => {
-        setFilters(prev => ({ ...prev, [e.target.name]: e.target.value }));
-    };
-
-    const deleteTx = async (id) => {
-        if (!confirm("Are you sure?")) return;
-        try {
-            const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
-            await fetch(`${apiUrl}/transactions/${id}`, { method: 'DELETE' });
-            fetchTransactions();
-        } catch (err) {
-            console.error(err);
-        }
-    };
 
     return (
-        <div className="space-y-8 animate-fade-in">
-            <div className="flex justify-between items-end">
-                <div>
-                    <h1 className="text-3xl font-extrabold tracking-tight">Financial Ledger</h1>
-                    <p className="text-gray-400 mt-1 font-medium italic">Comprehensive history of all your movements.</p>
+        <div className="flex flex-col h-full bg-[#FBFDFF] animate-fade-in relative">
+            <TopBar
+                title="Transactions"
+                fromDate={format(new Date(), "yyyy-MM-dd")}
+                toDate={format(new Date(), "yyyy-MM-dd")}
+                onFromChange={() => { }}
+                onToChange={() => { }}
+                onUpdate={() => { }}
+            />
+
+            <div className="p-10 space-y-10 overflow-y-auto pb-32">
+                <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6">
+                    <KpiCard title="Total Volume" value={summary.totalVolume} subValue={`${summary.count} entries`} tint="blue" />
+                    <KpiCard title="Total Inflow" value={summary.inflow} subValue="Income recorded" tint="emerald" />
+                    <KpiCard title="Total Outflow" value={summary.outflow} subValue="Expenses posted" tint="rose" />
+                    <KpiCard title="Active Ledger" value={summary.count} subValue="Live entries" tint="amber" isCurrency={false} />
                 </div>
+
+                <div className="flex flex-col xl:flex-row items-center justify-between gap-6">
+                    <div className="relative w-full xl:w-[450px] group">
+                        <Search className="absolute left-5 top-1/2 -translate-y-1/2 text-slate-300 group-focus-within:text-primary transition-all duration-300" size={18} />
+                        <input
+                            type="text"
+                            placeholder="Search records..."
+                            className="w-full h-14 pl-14 pr-6 bg-white border border-slate-100 rounded-2xl text-sm font-bold text-slate-700 placeholder:text-slate-300 focus:bg-white focus:border-primary focus:ring-4 focus:ring-primary/5 transition-all duration-300 shadow-sm"
+                        />
+                    </div>
+
+                    <div className="flex items-center gap-4 w-full xl:w-auto">
+                        <Button
+                            onClick={() => setIsCreateOpen(true)}
+                            className="h-14 px-8 rounded-2xl bg-slate-900 text-white hover:bg-slate-800 shadow-xl shadow-slate-900/10 gap-3"
+                        >
+                            <Plus size={18} />
+                            <span className="text-[10px] font-black uppercase tracking-widest">Post Entry</span>
+                        </Button>
+                        <Button variant="outline" className="h-14 px-8 border-slate-100 rounded-2xl shadow-sm gap-3">
+                            <Filter size={16} className="text-slate-400" />
+                            <span className="text-[10px] font-black uppercase tracking-widest">Filter</span>
+                        </Button>
+                    </div>
+                </div>
+
+                <motion.div
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    className="bg-white border border-slate-100 shadow-2xl shadow-slate-200/50 rounded-3xl overflow-hidden"
+                >
+                    <div className="overflow-x-auto">
+                        <table className="w-full text-left whitespace-nowrap">
+                            <thead>
+                                <tr className="bg-slate-50/30">
+                                    <th className="pl-10 pr-6 py-6 text-[10px] font-black uppercase tracking-[0.2em] text-slate-300">Transaction Entity</th>
+                                    <th className="px-6 py-6 text-[10px] font-black uppercase tracking-[0.2em] text-slate-300">Method</th>
+                                    <th className="px-6 py-6 text-[10px] font-black uppercase tracking-[0.2em] text-slate-300">Category</th>
+                                    <th className="px-6 py-6 text-[10px] font-black uppercase tracking-[0.2em] text-slate-300 text-right">Valuation</th>
+                                    <th className="pl-6 pr-10 py-6 text-[10px] font-black uppercase tracking-[0.2em] text-slate-300 text-right">Control</th>
+                                </tr>
+                            </thead>
+                            <tbody className="divide-y divide-slate-50">
+                                {transactions.map((t, idx) => {
+                                    const isPositive = t.type === 'INCOME';
+                                    const isTransfer = t.type.includes('TRANSFER');
+                                    const Icon = isPositive ? ArrowUpCircle : (isTransfer ? Repeat : ArrowDownCircle);
+                                    const colorClass = isPositive ? "text-emerald-500 bg-emerald-50" : (isTransfer ? "text-blue-500 bg-blue-50" : "text-rose-500 bg-rose-50");
+
+                                    return (
+                                        <motion.tr key={t.id} className="group hover:bg-slate-50/50 transition-all">
+                                            <td className="pl-10 pr-6 py-8">
+                                                <div className="flex items-center gap-5">
+                                                    <div className={cn("w-14 h-14 rounded-2xl flex items-center justify-center shrink-0 shadow-sm transition-all duration-500", colorClass)}>
+                                                        <Icon size={24} />
+                                                    </div>
+                                                    <div>
+                                                        <div className="font-black text-slate-900 tracking-tight text-lg uppercase">{t.merchant?.name || t.description || 'System Entry'}</div>
+                                                        <div className="text-[10px] font-black text-slate-400 uppercase tracking-widest mt-1">{format(new Date(t.occurredAt), 'MMMM dd, yyyy')}</div>
+                                                    </div>
+                                                </div>
+                                            </td>
+                                            <td className="px-6 py-8">
+                                                <div className="inline-flex items-center gap-3 px-4 py-2 bg-slate-50 rounded-xl">
+                                                    <Wallet size={14} className="text-slate-400" />
+                                                    <span className="font-black text-slate-500 tracking-widest text-[10px] uppercase">{t.asset?.name || 'Instrument'}</span>
+                                                </div>
+                                            </td>
+                                            <td className="px-6 py-8">
+                                                <Badge variant="default" className="bg-slate-50 border-none text-slate-400 font-black px-4 py-2 rounded-xl group-hover:bg-primary/10 group-hover:text-primary transition-all">
+                                                    {t.category?.name || 'UNCATEGORIZED'}
+                                                </Badge>
+                                            </td>
+                                            <td className="px-6 py-8 text-right">
+                                                <div className={cn("inline-flex flex-col items-end px-6 py-3 rounded-2xl", isPositive ? 'bg-emerald-50/50' : (isTransfer ? 'bg-blue-50/50' : 'bg-rose-50/50'))}>
+                                                    <div className={cn("font-black tracking-tighter text-2xl", isPositive ? 'text-emerald-600' : (isTransfer ? 'text-blue-600' : 'text-rose-600'))}>
+                                                        <span className="text-xs font-black mr-1 opacity-40">PKR</span>
+                                                        {isPositive ? '+' : '-'}{Math.abs(t.totalAmount).toLocaleString()}
+                                                    </div>
+                                                </div>
+                                            </td>
+                                            <td className="pl-6 pr-10 py-8 text-right">
+                                                <div className="flex items-center justify-end gap-2">
+                                                    <button
+                                                        onClick={() => deleteMutation.mutate(t.id)}
+                                                        className="w-10 h-10 rounded-xl flex items-center justify-center text-slate-300 hover:bg-rose-500 hover:text-white transition-all shadow-sm active:scale-95"
+                                                    >
+                                                        <Trash2 size={18} />
+                                                    </button>
+                                                    <button className="w-10 h-10 rounded-xl flex items-center justify-center text-slate-300 hover:bg-slate-900 hover:text-white transition-all shadow-sm active:scale-95">
+                                                        <ChevronRight size={18} />
+                                                    </button>
+                                                </div>
+                                            </td>
+                                        </motion.tr>
+                                    );
+                                })}
+                            </tbody>
+                        </table>
+                    </div>
+                </motion.div>
             </div>
 
-            {/* Filters Bar */}
-            <div className="glass p-6 rounded-3xl grid grid-cols-1 md:grid-cols-5 gap-4 border border-white/5 shadow-soft">
-                <div className="relative col-span-1 md:col-span-2">
-                    <Search size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-500" />
-                    <input
-                        type="text" name="search" placeholder="Search by note, category, person..."
-                        value={filters.search} onChange={handleFilterChange}
-                        className="input-finance pl-11"
-                    />
-                </div>
-                <select name="type" value={filters.type} onChange={handleFilterChange} className="input-finance appearance-none">
-                    <option value="">All Types</option>
-                    <option value="inflow">Inflow</option>
-                    <option value="outflow">Outflow</option>
-                    <option value="transfer">Transfer</option>
-                </select>
-                <select name="accountId" value={filters.accountId} onChange={handleFilterChange} className="input-finance appearance-none">
-                    <option value="">All Accounts</option>
-                    {accounts.map(acc => <option key={acc.id} value={acc.id}>{acc.name}</option>)}
-                </select>
-                <button onClick={fetchTransactions} className="btn-primary flex items-center justify-center gap-2">
-                    <Filter size={18} />
-                    <span>Apply Filters</span>
-                </button>
-            </div>
-
-            {/* Transactions Table */}
-            <div className="glass overflow-hidden rounded-3xl border border-white/5">
-                <table className="w-full text-left">
-                    <thead>
-                        <tr className="bg-white/[0.02]">
-                            <th className="py-5 px-6 text-[11px] font-bold uppercase tracking-widest text-gray-500">Transaction Details</th>
-                            <th className="py-5 px-6 text-[11px] font-bold uppercase tracking-widest text-gray-500">Accounts</th>
-                            <th className="py-5 px-6 text-[11px] font-bold uppercase tracking-widest text-gray-500 text-center">Date</th>
-                            <th className="py-5 px-6 text-[11px] font-bold uppercase tracking-widest text-gray-500 text-right">Amount</th>
-                            <th className="py-5 px-6 text-[11px] font-bold uppercase tracking-widest text-gray-500 text-center">Action</th>
-                        </tr>
-                    </thead>
-                    <tbody className="divide-y divide-white/5">
-                        {transactions.map((tx) => (
-                            <tr key={tx.id} className="hover:bg-white/[0.01] transition-colors group">
-                                <td className="py-5 px-6">
-                                    <div className="flex items-center gap-4">
-                                        <div className={`w-10 h-10 rounded-xl flex items-center justify-center shadow-inner ${tx.type === 'inflow' ? 'bg-emerald-500/10 text-emerald-500' : tx.type === 'outflow' ? 'bg-rose-500/10 text-rose-500' : 'bg-accent-500/10 text-accent-400'}`}>
-                                            {tx.type === 'inflow' ? <ArrowUpRight size={18} /> : tx.type === 'outflow' ? <ArrowDownLeft size={18} /> : <ArrowRightLeft size={18} />}
-                                        </div>
-                                        <div>
-                                            <p className="text-sm font-bold text-white tracking-tight">{tx.source_label || tx.category || 'Untitled'}</p>
-                                            <div className="flex items-center gap-2 mt-0.5">
-                                                <span className={`text-[9px] font-black uppercase px-1.5 py-0.5 rounded bg-white/5 ${tx.type === 'inflow' ? 'text-emerald-500' : tx.type === 'outflow' ? 'text-rose-500' : 'text-accent-400'}`}>{tx.type}</span>
-                                                {tx.person_name && <span className="text-[10px] text-gray-500 font-bold whitespace-nowrap">via {tx.person_name}</span>}
-                                            </div>
-                                        </div>
-                                    </div>
-                                </td>
-                                <td className="py-5 px-6">
-                                    <div className="flex flex-col gap-1">
-                                        <div className="flex items-center gap-2">
-                                            <div className="w-2 h-2 rounded-full" style={{ backgroundColor: tx.account_color }}></div>
-                                            <span className="text-xs font-bold text-gray-300">{tx.account_name}</span>
-                                        </div>
-                                        {tx.type === 'transfer' && tx.to_account_name && (
-                                            <div className="flex items-center gap-2">
-                                                <ArrowRightLeft size={10} className="text-gray-600" />
-                                                <div className="w-2 h-2 rounded-full" style={{ backgroundColor: tx.to_account_color }}></div>
-                                                <span className="text-xs font-bold text-gray-300">{tx.to_account_name}</span>
-                                            </div>
-                                        )}
-                                    </div>
-                                </td>
-                                <td className="py-5 px-6 text-center">
-                                    <p className="text-xs font-bold text-gray-400">{tx.date}</p>
-                                </td>
-                                <td className={`py-5 px-6 text-right font-black tracking-tighter ${tx.type === 'inflow' ? 'text-emerald-500' : tx.type === 'outflow' ? 'text-rose-500' : 'text-accent-400'}`}>
-                                    Rs. {tx.amount.toLocaleString()}
-                                </td>
-                                <td className="py-5 px-6 text-center">
-                                    <button
-                                        onClick={() => deleteTx(tx.id)}
-                                        className="p-2.5 rounded-xl bg-rose-500/5 text-gray-600 hover:text-rose-500 hover:bg-rose-500/10 transition-all">
-                                        <Trash2 size={16} />
-                                    </button>
-                                </td>
-                            </tr>
-                        ))}
-                        {transactions.length === 0 && !loading && (
-                            <tr>
-                                <td colSpan="5" className="py-20 text-center text-gray-500 font-medium italic">No transactions match your filters.</td>
-                            </tr>
-                        )}
-                    </tbody>
-                </table>
-            </div>
+            {/* QUICK POST OVERLAY (MOCK) */}
+            <AnimatePresence>
+                {isCreateOpen && (
+                    <motion.div
+                        initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+                        className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-50 flex items-center justify-center p-6"
+                    >
+                        <motion.div
+                            initial={{ scale: 0.9, y: 20 }} animate={{ scale: 1, y: 0 }} exit={{ scale: 0.9, y: 20 }}
+                            className="bg-white w-full max-w-lg rounded-[2.5rem] p-10 shadow-3xl relative"
+                        >
+                            <button onClick={() => setIsCreateOpen(false)} className="absolute top-8 right-8 text-slate-300 hover:text-slate-900 transition-colors">
+                                <X size={24} />
+                            </button>
+                            <h2 className="text-3xl font-black text-slate-900 uppercase tracking-tight mb-8">Post New Entry</h2>
+                            <div className="space-y-6 text-center py-20">
+                                <div className="w-20 h-20 bg-slate-50 rounded-full flex items-center justify-center mx-auto mb-4 text-slate-300">
+                                    <Plus size={40} />
+                                </div>
+                                <p className="text-slate-400 font-bold uppercase tracking-widest text-xs">Form implementation pending specialized layout</p>
+                                <Button onClick={() => setIsCreateOpen(false)} className="bg-slate-900 text-white w-full h-14 rounded-2xl">Close Protocol</Button>
+                            </div>
+                        </motion.div>
+                    </motion.div>
+                )}
+            </AnimatePresence>
         </div>
     );
 }

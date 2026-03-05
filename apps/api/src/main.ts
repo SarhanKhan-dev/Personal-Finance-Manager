@@ -2,17 +2,20 @@ import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
 
 async function bootstrap() {
-  const app = await NestFactory.create(AppModule);
+    const app = await NestFactory.create(AppModule);
+    app.enableCors();
 
-  // Enable CORS for frontend to communicate with backend
-  app.enableCors({
-    origin: '*', // For production, specify valid origins
-    methods: 'GET,HEAD,PUT,PATCH,POST,DELETE,OPTIONS',
-    credentials: true,
-  });
-
-  const port = process.env.PORT || 3001;
-  await app.listen(port);
-  console.log(`Application is running on: http://localhost:${port}`);
+    const port = process.env.PORT || 3001;
+    await app.listen(port);
+    console.log(`🚀 API running on: http://localhost:${port}`);
 }
+
 bootstrap();
+
+// For Vercel Serverless
+export const bootstrapServer = async () => {
+    const app = await NestFactory.create(AppModule);
+    app.enableCors();
+    await app.init();
+    return app.getHttpAdapter().getInstance();
+};

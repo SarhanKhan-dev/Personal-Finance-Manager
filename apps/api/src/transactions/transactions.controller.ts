@@ -1,40 +1,41 @@
-import { Controller, Get, Post, Delete, Body, Param, Query } from '@nestjs/common';
+import { Controller, Get, Post, Delete, Body, Param } from '@nestjs/common';
 import { TransactionsService } from './transactions.service';
+import { CreateTransactionRequest } from '@finance/shared';
 
 @Controller('transactions')
 export class TransactionsController {
     constructor(private readonly transactionsService: TransactionsService) { }
 
     @Get()
-    findAll(
-        @Query('limit') limit?: string,
-        @Query('offset') offset?: string,
-        @Query('search') search?: string,
-        @Query('type') type?: string,
-        @Query('accountId') accountId?: string,
-        @Query('personId') personId?: string,
-        @Query('dateFrom') dateFrom?: string,
-        @Query('dateTo') dateTo?: string,
-    ) {
-        return this.transactionsService.findAll({
-            limit: limit ? +limit : undefined,
-            offset: offset ? +offset : undefined,
-            search,
-            type,
-            accountId: accountId ? +accountId : undefined,
-            personId: personId ? +personId : undefined,
-            dateFrom,
-            dateTo,
-        });
+    async findAll() {
+        const userId = 'default-user-id';
+        const transactions = await this.transactionsService.findAll(userId);
+
+        const summary = {
+            totalVolume: transactions.reduce((acc: number, t: any) => acc + (Number(t.totalAmount) || 0), 0),
+            outflow: transactions.filter((t: any) => t.type === 'EXPENSE').reduce((acc: number, t: any) => acc + (Number(t.totalAmount) || 0), 0),
+            inflow: transactions.filter((t: any) => t.type === 'INCOME').reduce((acc: number, t: any) => acc + (Number(t.totalAmount) || 0), 0),
+            count: transactions.length,
+        };
+
+        return { transactions, summary };
+    }
+
+    @Get(':id')
+    async findOne(@Param('id') id: string) {
+        const userId = 'default-user-id';
+        return await this.transactionsService.findOne(userId, id);
     }
 
     @Post()
-    create(@Body() data: any) {
-        return this.transactionsService.create(data);
+    async create(@Body() req: CreateTransactionRequest) {
+        const userId = 'default-user-id';
+        return await this.transactionsService.create(userId, req);
     }
 
     @Delete(':id')
-    remove(@Param('id') id: string) {
-        return this.transactionsService.delete(+id);
+    async remove(@Param('id') id: string) {
+        const userId = 'default-user-id';
+        return await this.transactionsService.remove(userId, id);
     }
 }

@@ -1,142 +1,163 @@
 "use client";
 
-import { useEffect, useState } from 'react';
-import {
-    Wallet,
-    Trash2,
-    Plus,
-    RefreshCw,
-    MoreVertical,
-    Pencil,
-    AlertCircle
-} from "lucide-react";
+import { Wallet, Landmark, CreditCard, Coins, Plus, ChevronRight, Loader2 } from "lucide-react";
+import { Card, Button, Badge } from "@/components/ui";
+import { motion } from "framer-motion";
+import { cn } from "@/lib/utils";
+import { useQuery } from "@tanstack/react-query";
+import { fetchAssets, fetchSources } from "@/lib/api";
 
 export default function Accounts() {
-    const [accounts, setAccounts] = useState([]);
-    const [loading, setLoading] = useState(true);
-    const [recalculating, setRecalculating] = useState(false);
+    const { data: assets = [], isLoading: loadingAssets } = useQuery({
+        queryKey: ['assets'],
+        queryFn: fetchAssets
+    });
 
-    async function fetchAccounts() {
-        try {
-            setLoading(true);
-            const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
-            const res = await fetch(`${apiUrl}/accounts`);
-            const data = await res.json();
-            setAccounts(data);
-        } catch (err) {
-            console.error("Failed to fetch accounts:", err);
-        } finally {
-            setLoading(false);
-        }
-    }
+    const { data: sources = [], isLoading: loadingSources } = useQuery({
+        queryKey: ['sources'],
+        queryFn: fetchSources
+    });
 
-    useEffect(() => {
-        fetchAccounts();
-    }, []);
+    const isLoading = loadingAssets || loadingSources;
 
-    async function handleRecalc() {
-        try {
-            setRecalculating(true);
-            const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
-            const res = await fetch(`${apiUrl}/accounts/recalc`, { method: 'POST' });
-            const data = await res.json();
-            setAccounts(data);
-        } catch (err) {
-            console.error("Recalculation failed:", err);
-        } finally {
-            setRecalculating(false);
-        }
-    }
-
-    async function handleDelete(id) {
-        if (!confirm("Are you sure? Deleting an account will NOT delete its transactions, but it will disconnect them.")) return;
-        try {
-            const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
-            await fetch(`${apiUrl}/accounts/${id}`, { method: 'DELETE' });
-            fetchAccounts();
-        } catch (err) {
-            console.error("Delete failed:", err);
-        }
-    }
-
-    if (loading) {
+    if (isLoading) {
         return (
-            <div className="flex items-center justify-center h-full">
-                <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-accent-500"></div>
+            <div className="h-[80vh] w-full flex flex-col items-center justify-center gap-4">
+                <Loader2 className="animate-spin text-blue-600" size={40} />
+                <p className="text-slate-400 font-bold uppercase tracking-widest text-xs">Accessing Cabinet...</p>
             </div>
         );
     }
 
     return (
-        <div className="space-y-8 animate-fade-in">
-            <div className="flex justify-between items-end">
+        <div className="p-10 space-y-12 max-w-[1600px] mx-auto animate-fade-in pb-32">
+
+            {/* Header */}
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
+                <div className="flex items-center gap-5">
+                    <div className="w-14 h-14 rounded-2xl bg-blue-600/5 flex items-center justify-center text-blue-600 shadow-sm border border-blue-100/50">
+                        <Landmark size={32} />
+                    </div>
+                    <div>
+                        <h1 className="text-4xl font-black text-slate-800 tracking-tight uppercase leading-none">Cabinet</h1>
+                        <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] mt-2 ml-0.5">Asset & Source Management</p>
+                    </div>
+                </div>
+
+                <div className="flex items-center gap-4">
+                    <Button variant="outline" className="h-12 px-6 rounded-xl border-slate-200 font-bold text-slate-600 hover:bg-slate-50">
+                        Historical Logs
+                    </Button>
+                    <Button className="h-12 px-6 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold shadow-lg shadow-blue-500/20 border-none">
+                        <Plus size={20} className="mr-2" /> New Entry
+                    </Button>
+                </div>
+            </div>
+
+            <div className="grid grid-cols-1 xl:grid-cols-2 gap-12">
+
+                {/* Assets Section */}
+                <div className="space-y-8">
+                    <div className="flex items-center justify-between">
+                        <h2 className="text-[11px] font-black uppercase tracking-[0.3em] text-slate-400 flex items-center gap-3">
+                            <div className="w-1 h-4 bg-blue-500 rounded-full" />
+                            Active Instruments
+                        </h2>
+                        <Badge variant="outline" className="border-slate-200 text-slate-500 font-bold">{assets.length} Registered</Badge>
+                    </div>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+                        {assets.map(asset => (
+                            <AccountCard
+                                key={asset.id}
+                                name={asset.name}
+                                balance={asset.balance}
+                                type={asset.type}
+                                theme="blue"
+                            />
+                        ))}
+                    </div>
+                    {assets.length === 0 && (
+                        <div className="p-12 border-2 border-dashed border-slate-100 rounded-2xl text-center">
+                            <p className="text-slate-400 font-bold uppercase text-[10px] tracking-widest">No Instruments Found</p>
+                        </div>
+                    )}
+                </div>
+
+                {/* Sources Section */}
+                <div className="space-y-8">
+                    <div className="flex items-center justify-between">
+                        <h2 className="text-[11px] font-black uppercase tracking-[0.3em] text-slate-400 flex items-center gap-3">
+                            <div className="w-1 h-4 bg-emerald-500 rounded-full" />
+                            Economic Channels
+                        </h2>
+                        <Badge variant="outline" className="border-slate-200 text-slate-500 font-bold">{sources.length} Channels</Badge>
+                    </div>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+                        {sources.map(source => (
+                            <AccountCard
+                                key={source.id}
+                                name={source.name}
+                                balance={source.balance}
+                                type={source.type}
+                                theme="emerald"
+                            />
+                        ))}
+                    </div>
+                    {sources.length === 0 && (
+                        <div className="p-12 border-2 border-dashed border-slate-100 rounded-2xl text-center">
+                            <p className="text-slate-400 font-bold uppercase text-[10px] tracking-widest">No Economic Channels Found</p>
+                        </div>
+                    )}
+                </div>
+
+            </div>
+        </div>
+    );
+}
+
+function AccountCard({ name, balance, type, theme }) {
+    const isBlue = theme === 'blue';
+    const Icon = type === 'BANK' ? Landmark : (type === 'CARD' ? CreditCard : (type === 'CASH' ? Coins : Wallet));
+
+    return (
+        <div className="dashboard-card group hover:scale-[1.02] transition-transform cursor-pointer overflow-hidden p-6 bg-white border border-slate-100">
+            <div className="flex items-start justify-between">
+                <div className={cn(
+                    "w-12 h-12 rounded-xl flex items-center justify-center transition-colors shadow-sm",
+                    isBlue ? "bg-blue-50 text-blue-600 group-hover:bg-blue-600 group-hover:text-white" :
+                        "bg-emerald-50 text-emerald-600 group-hover:bg-emerald-600 group-hover:text-white"
+                )}>
+                    <Icon size={24} />
+                </div>
+                <div className="text-right">
+                    <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1">Valuation</p>
+                    <p className="text-xl font-black text-slate-800 tracking-tighter">
+                        <span className="text-[10px] text-slate-400 mr-1 uppercase font-black font-sans">PKR</span>
+                        {balance.toLocaleString()}
+                    </p>
+                </div>
+            </div>
+
+            <div className="mt-6 flex items-center justify-between">
                 <div>
-                    <h1 className="text-3xl font-extrabold tracking-tight">Your Accounts</h1>
-                    <p className="text-gray-400 mt-1 font-medium italic">Manage all your wallets and bank accounts.</p>
+                    <h3 className="font-black text-slate-800 text-lg uppercase tracking-tight group-hover:text-blue-600 transition-colors leading-none">{name}</h3>
+                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mt-2">{type}</p>
                 </div>
-                <div className="flex gap-3">
-                    <button
-                        onClick={handleRecalc}
-                        disabled={recalculating}
-                        className="btn-ghost flex items-center gap-2"
-                    >
-                        <RefreshCw size={18} className={recalculating ? "animate-spin" : ""} />
-                        {recalculating ? "Recalculating..." : "Sync Balances"}
-                    </button>
-                    <button className="btn-primary flex items-center gap-2">
-                        <Plus size={18} />
-                        <span>Add Account</span>
-                    </button>
+                <div className={cn(
+                    "w-8 h-8 rounded-lg flex items-center justify-center transition-all opacity-0 group-hover:opacity-100",
+                    isBlue ? "bg-blue-50 text-blue-600" : "bg-emerald-50 text-emerald-600"
+                )}>
+                    <ChevronRight size={16} />
                 </div>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                {accounts.map((acc) => (
-                    <div key={acc.id} className="card-finance p-8 h-56 flex flex-col justify-between">
-                        <div className="flex justify-between items-start">
-                            <div className="w-12 h-12 rounded-2xl flex items-center justify-center font-bold text-xl shadow-lg" style={{ backgroundColor: `${acc.color}20`, color: acc.color, border: `1px solid ${acc.color}40` }}>
-                                {acc.name[0]}
-                            </div>
-                            <div className="flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                                <button className="p-2 bg-bg-800 rounded-lg hover:bg-bg-700 text-gray-400 hover:text-white transition-colors">
-                                    <Pencil size={14} />
-                                </button>
-                                <button
-                                    onClick={() => handleDelete(acc.id)}
-                                    className="p-2 bg-rose-500/10 rounded-lg hover:bg-rose-500 text-rose-500 hover:text-white transition-all shadow-sm shadow-rose-500/10"
-                                >
-                                    <Trash2 size={14} />
-                                </button>
-                            </div>
-                        </div>
-
-                        <div>
-                            <p className="text-gray-400 text-xs font-bold uppercase tracking-widest">{acc.type}</p>
-                            <h3 className="text-xl font-extrabold mt-1 tracking-tight text-white">{acc.name}</h3>
-                        </div>
-
-                        <div className="flex justify-between items-end pt-4 border-t border-white/5">
-                            <div>
-                                <p className="text-[10px] text-gray-500 font-bold uppercase tracking-widest">Current Balance</p>
-                                <p className="text-2xl font-black tracking-tighter" style={{ color: acc.color }}>Rs. {acc.balance.toLocaleString()}</p>
-                            </div>
-                            <div className="p-2 rounded-xl bg-bg-800/50">
-                                <Wallet size={16} className="text-gray-500" />
-                            </div>
-                        </div>
-
-                        {/* Background Glow */}
-                        <div className={`absolute -bottom-16 -right-16 w-32 h-32 blur-3xl rounded-full`} style={{ backgroundColor: `${acc.color}15` }}></div>
-                    </div>
-                ))}
-                {accounts.length === 0 && (
-                    <div className="col-span-full py-20 bg-bg-900/40 rounded-3xl border border-dashed border-white/10 flex flex-col items-center justify-center">
-                        <AlertCircle size={48} className="text-gray-700 mb-4" />
-                        <p className="text-gray-500 font-bold uppercase tracking-[0.2em] text-sm">No accounts found</p>
-                        <button className="btn-primary mt-6">Create your first account</button>
-                    </div>
-                )}
-            </div>
+            {/* Accent Line */}
+            <div className={cn(
+                "absolute bottom-0 left-0 w-full h-[3px] opacity-0 group-hover:opacity-100 transition-opacity",
+                isBlue ? "bg-blue-600" : "bg-emerald-600"
+            )} />
         </div>
     );
 }

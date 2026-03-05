@@ -1,4 +1,4 @@
-import { Controller, Get } from '@nestjs/common';
+import { Controller, Get, Query } from '@nestjs/common';
 import { ReportsService } from './reports.service';
 
 @Controller('reports')
@@ -6,7 +6,11 @@ export class ReportsController {
     constructor(private readonly reportsService: ReportsService) { }
 
     @Get('summary')
-    getSummary() {
-        return this.reportsService.getSummary();
+    async getSummary(
+        @Query('from') from: string,
+        @Query('to') to: string,
+    ) {
+        const userId = 'default-user-id';
+        return await this.reportsService.getSummary(userId, from, to);
     }
 }
