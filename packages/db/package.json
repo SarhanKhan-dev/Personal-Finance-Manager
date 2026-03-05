@@ -13,8 +13,9 @@
     },
     "dependencies": {
         "@libsql/client": "^0.14.0",
-        "drizzle-orm": "^0.38.3",
-        "dotenv": "^16.4.5"
+        "@vercel/postgres": "^0.10.0",
+        "dotenv": "^16.4.5",
+        "drizzle-orm": "^0.38.4"
     },
     "devDependencies": {
         "drizzle-kit": "^0.30.1",

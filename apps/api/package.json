@@ -9,16 +9,18 @@
         "start:prod": "node dist/apps/api/src/main"
     },
     "dependencies": {
-        "@finance/shared": "*",
         "@finance/db": "*",
+        "@finance/shared": "*",
         "@nestjs/common": "^11.0.1",
         "@nestjs/core": "^11.0.1",
         "@nestjs/platform-express": "^11.0.1",
         "@nestjs/schedule": "^5.0.1",
+        "@vercel/postgres": "^0.10.0",
+        "dotenv": "^16.4.5",
+        "drizzle-orm": "^0.38.4",
         "reflect-metadata": "^0.2.2",
         "rxjs": "^7.8.1",
-        "zod": "^3.24.1",
-        "dotenv": "^16.4.5"
+        "zod": "^3.24.1"
     },
     "devDependencies": {
         "@nestjs/cli": "^11.0.0",

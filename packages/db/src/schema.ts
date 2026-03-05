@@ -1,8 +1,8 @@
-import { sqliteTable, text, integer } from 'drizzle-orm/sqlite-core';
+import { pgTable, text, integer, boolean, timestamp } from 'drizzle-orm/pg-core';
 import { sql, relations } from 'drizzle-orm';
 
 // Users
-export const users = sqliteTable('users', {
+export const users = pgTable('users', {
     id: text('id').primaryKey().$defaultFn(() => crypto.randomUUID()),
     name: text('name').notNull(),
     email: text('email').unique().notNull(),
@@ -10,13 +10,13 @@ export const users = sqliteTable('users', {
 });
 
 // Sources (Ownership)
-export const sources = sqliteTable('sources', {
+export const sources = pgTable('sources', {
     id: text('id').primaryKey().$defaultFn(() => crypto.randomUUID()),
     userId: text('user_id').references(() => users.id).notNull(),
     name: text('name').notNull(),
     type: text('type', { enum: ['OWNED', 'LOAN_RECEIVABLE', 'LOAN_PAYABLE', 'SAVINGS'] }).notNull().default('OWNED'),
     balance: integer('balance').notNull().default(0), // Cached balance
-    allowNegative: integer('allow_negative', { mode: 'boolean' }).notNull().default(false),
+    allowNegative: boolean('allow_negative').notNull().default(false),
 });
 
 export const sourcesRelations = relations(sources, ({ many }) => ({
@@ -25,13 +25,13 @@ export const sourcesRelations = relations(sources, ({ many }) => ({
 }));
 
 // Assets (Storage/Payment Instrument)
-export const assets = sqliteTable('assets', {
+export const assets = pgTable('assets', {
     id: text('id').primaryKey().$defaultFn(() => crypto.randomUUID()),
     userId: text('user_id').references(() => users.id).notNull(),
     name: text('name').notNull(),
     type: text('type', { enum: ['CASH', 'BANK', 'WALLET', 'CARD'] }).notNull(),
     balance: integer('balance').notNull().default(0), // Cached balance
-    allowNegative: integer('allow_negative', { mode: 'boolean' }).notNull().default(false),
+    allowNegative: boolean('allow_negative').notNull().default(false),
 });
 
 export const assetsRelations = relations(assets, ({ many }) => ({
@@ -40,7 +40,7 @@ export const assetsRelations = relations(assets, ({ many }) => ({
 }));
 
 // Merchants
-export const merchants = sqliteTable('merchants', {
+export const merchants = pgTable('merchants', {
     id: text('id').primaryKey().$defaultFn(() => crypto.randomUUID()),
     userId: text('user_id').references(() => users.id).notNull(),
     name: text('name').notNull(),
@@ -52,7 +52,7 @@ export const merchantsRelations = relations(merchants, ({ many }) => ({
 }));
 
 // Categories
-export const categories = sqliteTable('categories', {
+export const categories = pgTable('categories', {
     id: text('id').primaryKey().$defaultFn(() => crypto.randomUUID()),
     userId: text('user_id').references(() => users.id).notNull(),
     name: text('name').notNull(),
@@ -67,7 +67,7 @@ export const categoriesRelations = relations(categories, ({ one, many }) => ({
 
 // Transactions
 // Types: INCOME, EXPENSE, OWNERSHIP_TRANSFER, ASSET_TRANSFER, LOAN_GIVEN (lend), LOAN_RECEIVED (borrow), DEBT_PAYMENT
-export const transactions = sqliteTable('transactions', {
+export const transactions = pgTable('transactions', {
     id: text('id').primaryKey().$defaultFn(() => crypto.randomUUID()),
     userId: text('user_id').references(() => users.id).notNull(),
     type: text('type').notNull(),
@@ -97,7 +97,7 @@ export const transactionsRelations = relations(transactions, ({ one, many }) => 
 }));
 
 // Transaction Splits (Source updates)
-export const transactionSplits = sqliteTable('transaction_splits', {
+export const transactionSplits = pgTable('transaction_splits', {
     id: text('id').primaryKey().$defaultFn(() => crypto.randomUUID()),
     transactionId: text('transaction_id').references(() => transactions.id).notNull(),
     sourceId: text('source_id').references(() => sources.id).notNull(),
@@ -110,7 +110,7 @@ export const transactionSplitsRelations = relations(transactionSplits, ({ one })
 }));
 
 // Transaction Line Items
-export const transactionLines = sqliteTable('transaction_lines', {
+export const transactionLines = pgTable('transaction_lines', {
     id: text('id').primaryKey().$defaultFn(() => crypto.randomUUID()),
     transactionId: text('transaction_id').references(() => transactions.id).notNull(),
     label: text('label').notNull(),
@@ -124,7 +124,7 @@ export const transactionLinesRelations = relations(transactionLines, ({ one }) =
 }));
 
 // People (for debts)
-export const people = sqliteTable('people', {
+export const people = pgTable('people', {
     id: text('id').primaryKey().$defaultFn(() => crypto.randomUUID()),
     userId: text('user_id').references(() => users.id).notNull(),
     name: text('name').notNull(),
@@ -137,7 +137,7 @@ export const peopleRelations = relations(people, ({ many }) => ({
 }));
 
 // Debts
-export const debts = sqliteTable('debts', {
+export const debts = pgTable('debts', {
     id: text('id').primaryKey().$defaultFn(() => crypto.randomUUID()),
     userId: text('user_id').references(() => users.id).notNull(),
     personId: text('person_id').references(() => people.id).notNull(),
@@ -154,7 +154,7 @@ export const debtsRelations = relations(debts, ({ one }) => ({
 }));
 
 // Ledger Entries (The source of truth for all movements)
-export const ledgerEntries = sqliteTable('ledger_entries', {
+export const ledgerEntries = pgTable('ledger_entries', {
     id: text('id').primaryKey().$defaultFn(() => crypto.randomUUID()),
     userId: text('user_id').references(() => users.id).notNull(),
     transactionId: text('transaction_id').references(() => transactions.id),
