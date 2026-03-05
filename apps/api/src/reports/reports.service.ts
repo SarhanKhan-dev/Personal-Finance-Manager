@@ -92,7 +92,7 @@ export class ReportsService {
             .slice(0, 5)
             .map(d => ({
                 id: d.id,
-                entity: d.person?.name || 'Unknown',
+                entity: 'Unknown',
                 kind: d.kind,
                 outstandingAmount: Number(d.outstandingAmount)
             }));

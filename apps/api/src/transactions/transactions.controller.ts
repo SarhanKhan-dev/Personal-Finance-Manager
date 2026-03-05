@@ -1,4 +1,5 @@
-import { Controller, Get, Post, Delete, Body, Param } from '@nestjs/common';
+import { Controller, Get, Post, Delete, Body, Param, Query } from '@nestjs/common';
+
 import { TransactionsService } from './transactions.service';
 import { CreateTransactionRequest } from '@finance/shared';
 
@@ -7,19 +8,21 @@ export class TransactionsController {
     constructor(private readonly transactionsService: TransactionsService) { }
 
     @Get()
-    async findAll() {
+    async findAll(
+        @Query('from') from: string,
+        @Query('to') to: string,
+        @Query('page') page: string,
+        @Query('limit') limit: string
+    ) {
         const userId = 'default-user-id';
-        const transactions = await this.transactionsService.findAll(userId);
+        const pageNum = parseInt(page) || 1;
+        const pageSize = parseInt(limit) || 20;
 
-        const summary = {
-            totalVolume: transactions.reduce((acc: number, t: any) => acc + (Number(t.totalAmount) || 0), 0),
-            outflow: transactions.filter((t: any) => t.type === 'EXPENSE').reduce((acc: number, t: any) => acc + (Number(t.totalAmount) || 0), 0),
-            inflow: transactions.filter((t: any) => t.type === 'INCOME').reduce((acc: number, t: any) => acc + (Number(t.totalAmount) || 0), 0),
-            count: transactions.length,
-        };
+        const { transactions, summary, count } = await this.transactionsService.findAll(userId, from, to, pageNum, pageSize);
 
-        return { transactions, summary };
+        return { transactions, summary, count, page: pageNum, pages: Math.ceil(count / pageSize) };
     }
+
 
     @Get(':id')
     async findOne(@Param('id') id: string) {

@@ -4,11 +4,18 @@ const BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
 
 
 // --- TRANSACTIONS ---
-export async function fetchTransactions() {
-    const res = await fetch(`${BASE_URL}/transactions`);
+export async function fetchTransactions(from, to, page = 1, limit = 20) {
+    const params = new URLSearchParams();
+    if (from) params.append('from', from);
+    if (to) params.append('to', to);
+    if (page) params.append('page', page);
+    if (limit) params.append('limit', limit);
+
+    const res = await fetch(`${BASE_URL}/transactions?${params.toString()}`);
     if (!res.ok) throw new Error('Failed to fetch transactions');
     return res.json();
 }
+
 
 // --- DASHBOARD / REPORTS ---
 export async function fetchSummary(from, to) {

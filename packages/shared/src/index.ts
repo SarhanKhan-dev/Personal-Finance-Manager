@@ -25,7 +25,9 @@ export const CreateTransactionSchema = z.object({
     toAssetId: z.string().uuid().optional(),
 
     merchantId: z.string().uuid().optional(),
+    merchantName: z.string().optional(),
     categoryId: z.string().uuid().optional(),
+    categoryName: z.string().optional(),
 
     splits: z.array(z.object({
         sourceId: z.string().uuid(),
@@ -42,9 +44,12 @@ export const CreateTransactionSchema = z.object({
         unitPrice: z.number().int().positive().optional()
     })).optional(),
 
+    sourceName: z.string().optional(),
     personId: z.string().uuid().optional(),
+    personName: z.string().optional(),
     debtId: z.string().uuid().optional(),
     direction: z.enum(['RECEIVE', 'PAY']).optional()
+
 }).refine((data) => {
     if (['EXPENSE', 'INCOME'].includes(data.type)) {
         return !!data.assetId && !!data.splits && data.splits.length > 0;

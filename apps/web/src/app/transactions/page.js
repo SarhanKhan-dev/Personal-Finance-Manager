@@ -16,31 +16,41 @@ import {
     Repeat,
     Trash2,
     Plus,
-    X
+    X,
+    Folder
 } from "lucide-react";
 import { Card, Input, Button, Badge } from "@/components/ui";
 import { motion, AnimatePresence } from "framer-motion";
 import { cn } from "@/lib/utils";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { fetchTransactions, deleteTransaction, createTransaction } from "@/lib/api";
+import { fetchTransactions, deleteTransaction } from "@/lib/api";
 import { format } from "date-fns";
 import { TopBar } from "@/components/TopBar";
 import { KpiCard } from "@/components/KpiCard";
 import { useState } from "react";
+import TransactionModal from "@/components/TransactionModal";
 
 export default function Transactions() {
     const queryClient = useQueryClient();
     const [isCreateOpen, setIsCreateOpen] = useState(false);
 
+    // Date Range State
+    const [dateRange, setDateRange] = useState({
+        from: format(new Date(new Date().getFullYear(), new Date().getMonth(), 1), "yyyy-MM-dd"), // Start of current month
+        to: format(new Date(), "yyyy-MM-dd") // Today
+    });
+
     const { data, isLoading } = useQuery({
-        queryKey: ['transactions'],
-        queryFn: fetchTransactions
+        queryKey: ['transactions', dateRange.from, dateRange.to],
+        queryFn: () => fetchTransactions(dateRange.from, dateRange.to)
     });
 
     const deleteMutation = useMutation({
         mutationFn: deleteTransaction,
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ['transactions'] });
+            queryClient.invalidateQueries({ queryKey: ['summary'] });
+            queryClient.invalidateQueries({ queryKey: ['assets'] });
         }
     });
 
@@ -67,20 +77,20 @@ export default function Transactions() {
     return (
         <div className="flex flex-col h-full bg-[#FBFDFF] animate-fade-in relative">
             <TopBar
-                title="Transactions"
-                fromDate={format(new Date(), "yyyy-MM-dd")}
-                toDate={format(new Date(), "yyyy-MM-dd")}
-                onFromChange={() => { }}
-                onToChange={() => { }}
-                onUpdate={() => { }}
+                title="Transactions Ledger"
+                fromDate={dateRange.from}
+                toDate={dateRange.to}
+                onFromChange={(val) => setDateRange(prev => ({ ...prev, from: val }))}
+                onToChange={(val) => setDateRange(prev => ({ ...prev, to: val }))}
+                onUpdate={() => queryClient.invalidateQueries({ queryKey: ['transactions'] })}
             />
 
             <div className="p-10 space-y-10 overflow-y-auto pb-32">
                 <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6">
-                    <KpiCard title="Total Volume" value={summary.totalVolume} subValue={`${summary.count} entries`} tint="blue" />
+                    <KpiCard title="Total Volume" value={summary.totalVolume} subValue={`${data?.count || summary.count} entries`} tint="blue" />
                     <KpiCard title="Total Inflow" value={summary.inflow} subValue="Income recorded" tint="emerald" />
                     <KpiCard title="Total Outflow" value={summary.outflow} subValue="Expenses posted" tint="rose" />
-                    <KpiCard title="Active Ledger" value={summary.count} subValue="Live entries" tint="amber" isCurrency={false} />
+                    <KpiCard title="Active Ledger" value={data?.count || summary.count} subValue="Live entries" tint="amber" isCurrency={false} />
                 </div>
 
                 <div className="flex flex-col xl:flex-row items-center justify-between gap-6">
@@ -117,19 +127,41 @@ export default function Transactions() {
                         <table className="w-full text-left whitespace-nowrap">
                             <thead>
                                 <tr className="bg-slate-50/30">
-                                    <th className="pl-10 pr-6 py-6 text-[10px] font-black uppercase tracking-[0.2em] text-slate-300">Transaction Entity</th>
-                                    <th className="px-6 py-6 text-[10px] font-black uppercase tracking-[0.2em] text-slate-300">Method</th>
-                                    <th className="px-6 py-6 text-[10px] font-black uppercase tracking-[0.2em] text-slate-300">Category</th>
-                                    <th className="px-6 py-6 text-[10px] font-black uppercase tracking-[0.2em] text-slate-300 text-right">Valuation</th>
-                                    <th className="pl-6 pr-10 py-6 text-[10px] font-black uppercase tracking-[0.2em] text-slate-300 text-right">Control</th>
+                                    <th className="pl-10 pr-6 py-6 text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">Transaction Entity</th>
+                                    <th className="px-6 py-6 text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">Method</th>
+                                    <th className="px-6 py-6 text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">Category</th>
+                                    <th className="px-6 py-6 text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 text-right">Valuation</th>
+                                    <th className="pl-6 pr-10 py-6 text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 text-right">Control</th>
                                 </tr>
                             </thead>
                             <tbody className="divide-y divide-slate-50">
+                                {transactions.length === 0 && (
+                                    <tr>
+                                        <td colSpan={5} className="py-20 text-center">
+                                            <div className="flex flex-col items-center justify-center text-slate-400">
+                                                <Folder size={48} className="mb-4 opacity-50" />
+                                                <p className="text-sm font-black uppercase tracking-widest">No transactions found</p>
+                                                <p className="text-[10px] uppercase tracking-wider mt-2">Try adjusting your date range filter</p>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                )}
                                 {transactions.map((t, idx) => {
-                                    const isPositive = t.type === 'INCOME';
+                                    const isIncome = t.type === 'INCOME';
+                                    const isExpense = t.type === 'EXPENSE';
                                     const isTransfer = t.type.includes('TRANSFER');
+                                    const isLoanReceive = t.type === 'LOAN_RECEIVED';
+                                    const isPositive = isIncome || isLoanReceive;
+
                                     const Icon = isPositive ? ArrowUpCircle : (isTransfer ? Repeat : ArrowDownCircle);
                                     const colorClass = isPositive ? "text-emerald-500 bg-emerald-50" : (isTransfer ? "text-blue-500 bg-blue-50" : "text-rose-500 bg-rose-50");
+
+                                    let title = t.description;
+                                    if (!title) {
+                                        if (t.merchant) title = t.merchant.name;
+                                        else if (t.person) title = t.person.name + (isLoanReceive ? ' (Loan Received)' : ' (Loan Given)');
+                                        else title = 'System Entry';
+                                    }
 
                                     return (
                                         <motion.tr key={t.id} className="group hover:bg-slate-50/50 transition-all">
@@ -139,7 +171,7 @@ export default function Transactions() {
                                                         <Icon size={24} />
                                                     </div>
                                                     <div>
-                                                        <div className="font-black text-slate-900 tracking-tight text-lg uppercase">{t.merchant?.name || t.description || 'System Entry'}</div>
+                                                        <div className="font-black text-slate-900 tracking-tight text-lg uppercase truncate max-w-[200px]">{title}</div>
                                                         <div className="text-[10px] font-black text-slate-400 uppercase tracking-widest mt-1">{format(new Date(t.occurredAt), 'MMMM dd, yyyy')}</div>
                                                     </div>
                                                 </div>
@@ -147,12 +179,12 @@ export default function Transactions() {
                                             <td className="px-6 py-8">
                                                 <div className="inline-flex items-center gap-3 px-4 py-2 bg-slate-50 rounded-xl">
                                                     <Wallet size={14} className="text-slate-400" />
-                                                    <span className="font-black text-slate-500 tracking-widest text-[10px] uppercase">{t.asset?.name || 'Instrument'}</span>
+                                                    <span className="font-black text-slate-500 tracking-widest text-[10px] uppercase truncate max-w-[120px]">{t.asset?.name || 'Instrument'}</span>
                                                 </div>
                                             </td>
                                             <td className="px-6 py-8">
-                                                <Badge variant="default" className="bg-slate-50 border-none text-slate-400 font-black px-4 py-2 rounded-xl group-hover:bg-primary/10 group-hover:text-primary transition-all">
-                                                    {t.category?.name || 'UNCATEGORIZED'}
+                                                <Badge variant="default" className="bg-slate-50 border-none text-slate-400 font-black px-4 py-2 rounded-xl group-hover:bg-primary/10 group-hover:text-primary transition-all uppercase tracking-wider text-[9px]">
+                                                    {t.category?.name || (t.type.includes('LOAN') ? 'DEBT' : 'UNCATEGORIZED')}
                                                 </Badge>
                                             </td>
                                             <td className="px-6 py-8 text-right">
@@ -164,15 +196,16 @@ export default function Transactions() {
                                                 </div>
                                             </td>
                                             <td className="pl-6 pr-10 py-8 text-right">
-                                                <div className="flex items-center justify-end gap-2">
+                                                <div className="flex items-center justify-end gap-2 text-slate-300">
                                                     <button
                                                         onClick={() => deleteMutation.mutate(t.id)}
-                                                        className="w-10 h-10 rounded-xl flex items-center justify-center text-slate-300 hover:bg-rose-500 hover:text-white transition-all shadow-sm active:scale-95"
+                                                        className="w-10 h-10 rounded-xl flex items-center justify-center hover:bg-rose-500 hover:text-white transition-all shadow-sm active:scale-95 group/del"
                                                     >
-                                                        <Trash2 size={18} />
-                                                    </button>
-                                                    <button className="w-10 h-10 rounded-xl flex items-center justify-center text-slate-300 hover:bg-slate-900 hover:text-white transition-all shadow-sm active:scale-95">
-                                                        <ChevronRight size={18} />
+                                                        {deleteMutation.isPending && deleteMutation.variables === t.id ? (
+                                                            <Loader2 size={18} className="animate-spin text-rose-500" />
+                                                        ) : (
+                                                            <Trash2 size={18} className="group-hover/del:scale-110 transition-transform" />
+                                                        )}
                                                     </button>
                                                 </div>
                                             </td>
@@ -185,32 +218,16 @@ export default function Transactions() {
                 </motion.div>
             </div>
 
-            {/* QUICK POST OVERLAY (MOCK) */}
-            <AnimatePresence>
-                {isCreateOpen && (
-                    <motion.div
-                        initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-                        className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-50 flex items-center justify-center p-6"
-                    >
-                        <motion.div
-                            initial={{ scale: 0.9, y: 20 }} animate={{ scale: 1, y: 0 }} exit={{ scale: 0.9, y: 20 }}
-                            className="bg-white w-full max-w-lg rounded-[2.5rem] p-10 shadow-3xl relative"
-                        >
-                            <button onClick={() => setIsCreateOpen(false)} className="absolute top-8 right-8 text-slate-300 hover:text-slate-900 transition-colors">
-                                <X size={24} />
-                            </button>
-                            <h2 className="text-3xl font-black text-slate-900 uppercase tracking-tight mb-8">Post New Entry</h2>
-                            <div className="space-y-6 text-center py-20">
-                                <div className="w-20 h-20 bg-slate-50 rounded-full flex items-center justify-center mx-auto mb-4 text-slate-300">
-                                    <Plus size={40} />
-                                </div>
-                                <p className="text-slate-400 font-bold uppercase tracking-widest text-xs">Form implementation pending specialized layout</p>
-                                <Button onClick={() => setIsCreateOpen(false)} className="bg-slate-900 text-white w-full h-14 rounded-2xl">Close Protocol</Button>
-                            </div>
-                        </motion.div>
-                    </motion.div>
-                )}
-            </AnimatePresence>
+            {/* Custom Modal for Posting */}
+            <TransactionModal
+                isOpen={isCreateOpen}
+                onClose={() => setIsCreateOpen(false)}
+                onSuccess={() => {
+                    setIsCreateOpen(false);
+                    // Query invalidation happens in Modal
+                }}
+            />
         </div>
     );
 }
+

@@ -28,7 +28,7 @@ async function seed() {
     await db.insert(schema.sources).values([
         { userId: user.id, name: 'Salary', type: 'OWNED', balance: 500000, allowNegative: false },
         { userId: user.id, name: 'Savings Account', type: 'SAVINGS', balance: 200000, allowNegative: false }
-    ]);
+    ] as any);
     console.log('Created Sources.');
 
     // 3. Create sample Assets
@@ -37,7 +37,7 @@ async function seed() {
         { userId: user.id, name: 'HBL Bank', type: 'BANK', balance: 150000, allowNegative: false },
         { userId: user.id, name: 'JazzCash', type: 'WALLET', balance: 25000, allowNegative: false },
         { userId: user.id, name: 'Credit Card', type: 'CARD', balance: -10000, allowNegative: true }
-    ]);
+    ] as any);
     console.log('Created Assets.');
 
     // 4. Create sample Merchants
@@ -45,31 +45,31 @@ async function seed() {
         { userId: user.id, name: 'Salman Bakery' },
         { userId: user.id, name: 'K-Electric' },
         { userId: user.id, name: 'Imtiaz Super Market' }
-    ]);
+    ] as any);
     console.log('Created Merchants.');
 
     // 5. Create Categories
     const [grocery] = await db.insert(schema.categories).values({
         userId: user.id,
         name: 'Grocery'
-    }).returning();
+    } as any).returning();
 
     await db.insert(schema.categories).values({
         userId: user.id,
         name: 'Meat',
         parentId: grocery.id
-    });
+    } as any);
 
     const [utilities] = await db.insert(schema.categories).values({
         userId: user.id,
         name: 'Utilities'
-    }).returning();
+    } as any).returning();
 
     await db.insert(schema.categories).values({
         userId: user.id,
         name: 'Electricity',
         parentId: utilities.id
-    });
+    } as any);
     console.log('Created Categories.');
 
     console.log('Database Seeding Complete!');
