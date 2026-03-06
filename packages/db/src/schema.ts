@@ -13,7 +13,6 @@ export const users = pgTable('users', {
 export const sources = pgTable('sources', {
     id: text('id').primaryKey().$defaultFn(() => crypto.randomUUID()),
     userId: text('user_id').references(() => users.id).notNull(),
-    personId: text('person_id'), // Optional link to a person record
     name: text('name').notNull(),
     type: text('type', { enum: ['OWNED', 'LOAN_RECEIVABLE', 'LOAN_PAYABLE', 'SAVINGS'] }).notNull().default('OWNED'),
     balance: integer('balance').notNull().default(0), // Cached balance

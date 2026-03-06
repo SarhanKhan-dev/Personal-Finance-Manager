@@ -311,11 +311,8 @@ export default function TransactionModal({ isOpen, onClose, onSuccess }) {
                                                             <optgroup label="Assets">
                                                                 {assets.map(a => <option key={a.id} value={`asset:${a.id}`}>{a.name.toUpperCase()}</option>)}
                                                             </optgroup>
-                                                            <optgroup label="Core Owners">
-                                                                {owners.filter(o => !o.personId).map(o => <option key={o.id} value={`owner:${o.id}`}>{o.name.toUpperCase()}</option>)}
-                                                            </optgroup>
-                                                            <optgroup label="People (Buckets)">
-                                                                {owners.filter(o => o.personId).map(o => <option key={o.id} value={`owner:${o.id}`}>{o.name.toUpperCase()}</option>)}
+                                                            <optgroup label="Owners">
+                                                                {owners.map(o => <option key={o.id} value={`owner:${o.id}`}>{o.name.toUpperCase()}</option>)}
                                                             </optgroup>
                                                         </select>
                                                     </div>
@@ -333,11 +330,8 @@ export default function TransactionModal({ isOpen, onClose, onSuccess }) {
                                                             <optgroup label="Assets">
                                                                 {assets.map(a => <option key={a.id} value={`asset:${a.id}`}>{a?.name?.toUpperCase()}</option>)}
                                                             </optgroup>
-                                                            <optgroup label="Core Owners">
-                                                                {owners.filter(o => !o.personId).map(o => <option key={o.id} value={`owner:${o.id}`}>{o?.name?.toUpperCase()}</option>)}
-                                                            </optgroup>
-                                                            <optgroup label="People (Buckets)">
-                                                                {owners.filter(o => o.personId).map(o => <option key={o.id} value={`owner:${o.id}`}>{o?.name?.toUpperCase()}</option>)}
+                                                            <optgroup label="Owners">
+                                                                {owners.map(o => <option key={o.id} value={`owner:${o.id}`}>{o?.name?.toUpperCase()}</option>)}
                                                             </optgroup>
                                                         </select>
                                                     </div>
