@@ -2,6 +2,7 @@ import { Client } from 'pg';
 import { drizzle } from 'drizzle-orm/node-postgres';
 import * as schema from './schema';
 import * as dotenv from 'dotenv';
+import { eq } from 'drizzle-orm';
 import * as path from 'path';
 
 dotenv.config({ path: path.join(__dirname, '../../../.env') });
@@ -16,13 +17,19 @@ async function seed() {
     const db = drizzle(client, { schema });
 
     // 1. Create default user
-    const [user] = await db.insert(schema.users).values({
+    await db.insert(schema.users).values({
         id: 'default-user-id',
         name: 'Default User',
         email: 'user@example.com',
-    } as any).onConflictDoNothing().returning();
+    } as any).onConflictDoNothing();
 
-    console.log('Created User:', user?.name || 'Already Exists');
+    const user = await db.query.users.findFirst({ where: eq(schema.users.id, 'default-user-id') });
+    if (!user) {
+        console.error('Failed to create or find default user');
+        process.exit(1);
+    }
+
+    console.log('Using User:', user.name);
 
     // 2. Create sample Sources
     await db.insert(schema.sources).values([

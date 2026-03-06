@@ -32,7 +32,11 @@ export default function Dashboard() {
 
     const dashboard = data || { summary: {}, tables: {} };
     const summary = dashboard.summary || {};
-    const tables = dashboard.tables || {};
+    const tables = dashboard.tables || {
+        topCategories: [],
+        topMerchants: [],
+        topDebts: []
+    };
 
     const categoryColumns = [
         { header: "Category", accessor: "name" },
