@@ -1,8 +1,8 @@
 "use client";
 
-import { useState } from "react";
+import { useState, Suspense } from "react";
 import Sidebar from "./Sidebar";
-import { Menu, X, Bell, User, Cpu, ShieldCheck, Zap } from "lucide-react";
+import { Menu, X, Bell, User, Cpu, ShieldCheck, Zap, Loader2, Building2 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { cn } from "@/lib/utils";
 
@@ -85,7 +85,19 @@ export default function AppShell({ children }) {
 
                 {/* Scoped Content Relay */}
                 <div className="flex-1 w-full relative scroll-smooth bg-[#FBFDFF]">
-                    {children}
+                    <Suspense fallback={
+                        <div className="h-[80vh] w-full flex flex-col items-center justify-center gap-6">
+                            <div className="relative">
+                                <div className="w-16 h-16 rounded-[1.5rem] border-4 border-slate-100 border-t-slate-900 animate-spin" />
+                                <div className="absolute inset-0 flex items-center justify-center text-slate-900">
+                                    <Zap size={24} />
+                                </div>
+                            </div>
+                            <p className="text-slate-400 font-black uppercase tracking-[0.3em] text-[10px]">Synchronizing Core...</p>
+                        </div>
+                    }>
+                        {children}
+                    </Suspense>
                 </div>
             </main>
         </div>
