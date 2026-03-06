@@ -247,15 +247,15 @@ export default function DebtsPage() {
                                         <td className="pl-6 pr-8 py-6 text-right">
                                             <div className={cn(
                                                 "px-6 py-2 rounded-xl text-[9px] font-black uppercase tracking-[0.2em] border shadow-sm inline-block",
-                                                item.remaining === 0
+                                                (Number(p.receivable || 0) === Number(p.payable || 0))
                                                     ? 'bg-emerald-950 text-white border-none'
                                                     : 'bg-white text-slate-900 border-slate-100'
                                             )}>
-                                                {item.remaining === 0 ? 'Fully Paid' : 'Unpaid Balance'}
+                                                {(Number(p.receivable || 0) === Number(p.payable || 0)) ? 'Settle' : 'Balance'}
                                             </div>
                                         </td>
                                         <td className="pl-8 pr-12 py-10 text-right">
-                                            <Link href={`/debts/person/${item.personId}`}>
+                                            <Link href={`/debts/person/${p.personId || p.id}`}>
                                                 <button className="h-14 w-14 rounded-[1.25rem] bg-white border border-slate-100 flex items-center justify-center text-slate-300 hover:bg-slate-950 hover:text-white hover:border-slate-950 transition-all shadow-xl shadow-slate-200/50 group/btn active:scale-90">
                                                     <ChevronRight size={24} className="group-hover/btn:translate-x-1 transition-transform" />
                                                 </button>
