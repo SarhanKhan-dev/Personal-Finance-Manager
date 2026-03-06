@@ -135,6 +135,7 @@ export default function TransactionModal({ isOpen, onClose, onSuccess }) {
             payload.assetId = assetId;
             payload.categoryName = categoryName || 'Unassigned';
             payload.merchantName = merchantName || 'Direct Protocol';
+            if (personId) payload.personId = personId;
             payload.splits = splits.map(s => ({ sourceId: s.sourceId, amount: parseFloat(s.amount) || numAmount }));
         }
 
@@ -269,14 +270,14 @@ export default function TransactionModal({ isOpen, onClose, onSuccess }) {
 
                                         {/* Primary Identity Row */}
                                         <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                                            {txType === 'DEBT' && (
+                                            {['INCOME', 'DEBT'].includes(txType) && (
                                                 <div className="space-y-3">
-                                                    <Label className="text-[8px] font-black uppercase tracking-widest text-slate-400 ml-2">Person</Label>
+                                                    <Label className="text-[8px] font-black uppercase tracking-widest text-slate-400 ml-2">Person (From/To)</Label>
                                                     <select
-                                                        value={personId} onChange={e => setPersonId(e.target.value)} required
+                                                        value={personId} onChange={e => setPersonId(e.target.value)} required={txType === 'DEBT'}
                                                         className="w-full h-14 bg-white border-slate-100 rounded-xl px-6 font-black text-slate-700 focus:ring-4 focus:ring-slate-950/5 outline-none appearance-none cursor-pointer text-xs"
                                                     >
-                                                        <option value="">Select Person</option>
+                                                        <option value="">{txType === 'INCOME' ? 'None / Anonymous' : 'Select Person'}</option>
                                                         {people.map(p => <option key={p.id} value={p.id}>{p?.name?.toUpperCase()}</option>)}
                                                     </select>
                                                 </div>
@@ -339,7 +340,7 @@ export default function TransactionModal({ isOpen, onClose, onSuccess }) {
                                         </div>
 
                                         {/* Classification Metadata */}
-                                        {['EXPENSE'].includes(txType) && (
+                                        {['INCOME', 'EXPENSE'].includes(txType) && (
                                             <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                                                 <div className="space-y-3">
                                                     <div className="flex items-center gap-2 ml-2">
@@ -357,7 +358,9 @@ export default function TransactionModal({ isOpen, onClose, onSuccess }) {
                                                 <div className="space-y-3">
                                                     <div className="flex items-center gap-2 ml-2">
                                                         <Store size={12} className="text-slate-300" />
-                                                        <Label className="text-[8px] font-black uppercase tracking-widest text-slate-400">Merchant / Vendor</Label>
+                                                        <Label className="text-[8px] font-black uppercase tracking-widest text-slate-400">
+                                                            {txType === 'INCOME' ? 'Payer / Source' : 'Merchant / Vendor'}
+                                                        </Label>
                                                     </div>
                                                     <select
                                                         value={merchantName} onChange={e => setMerchantName(e.target.value)}
