@@ -49,7 +49,7 @@ export default function Sidebar() {
                         <TrendingUp size={22} className="relative z-10" />
                     </div>
                     <div>
-                        <h1 className="font-black text-xl tracking-tighter text-slate-950 leading-none">PFM CORE</h1>
+                        <h1 className="font-black text-xl tracking-tighter text-slate-950 uppercase leading-none">Personal Finance</h1>
                     </div>
                 </motion.div>
                 <div className="flex items-center gap-2 mt-4 px-1">

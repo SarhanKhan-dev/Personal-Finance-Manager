@@ -47,7 +47,7 @@ export class ReportsService {
                     eq(schema.transactions.status, 'POSTED'),
                     between(schema.transactions.occurredAt, startDate, endDate)
                 ))
-                .groupBy(schema.transactions.categoryId)
+                .groupBy(schema.transactions.categoryId, schema.categories.name)
                 .orderBy(desc(sql`sum(${schema.transactions.totalAmount})`));
 
             const topCategoryData = byCategoryRaw[0] || { name: 'None', amount: 0 };
@@ -89,7 +89,7 @@ export class ReportsService {
                     eq(schema.transactions.status, 'POSTED'),
                     between(schema.transactions.occurredAt, startDate, endDate)
                 ))
-                .groupBy(schema.transactions.merchantId)
+                .groupBy(schema.transactions.merchantId, schema.merchants.name)
                 .orderBy(desc(sql`sum(${schema.transactions.totalAmount})`));
 
             const top5Merchants = byMerchantRaw.slice(0, 5).map(m => ({
@@ -168,7 +168,7 @@ export class ReportsService {
             }).from(schema.transactions)
                 .leftJoin(schema.categories, eq(schema.transactions.categoryId, schema.categories.id))
                 .where(and(eq(schema.transactions.userId, userId), eq(schema.transactions.type, 'EXPENSE'), eq(schema.transactions.status, 'POSTED'), between(schema.transactions.occurredAt, startDate, endDate)))
-                .groupBy(schema.transactions.categoryId)
+                .groupBy(schema.transactions.categoryId, schema.categories.name)
                 .orderBy(desc(sql`sum(${schema.transactions.totalAmount})`));
 
             const byMerchant = await db.select({
@@ -178,7 +178,7 @@ export class ReportsService {
             }).from(schema.transactions)
                 .leftJoin(schema.merchants, eq(schema.transactions.merchantId, schema.merchants.id))
                 .where(and(eq(schema.transactions.userId, userId), eq(schema.transactions.type, 'EXPENSE'), eq(schema.transactions.status, 'POSTED'), between(schema.transactions.occurredAt, startDate, endDate)))
-                .groupBy(schema.transactions.merchantId)
+                .groupBy(schema.transactions.merchantId, schema.merchants.name)
                 .orderBy(desc(sql`sum(${schema.transactions.totalAmount})`));
 
             const byAsset = await db.select({
@@ -188,7 +188,7 @@ export class ReportsService {
             }).from(schema.transactions)
                 .leftJoin(schema.assets, eq(schema.transactions.assetId, schema.assets.id))
                 .where(and(eq(schema.transactions.userId, userId), eq(schema.transactions.status, 'POSTED'), between(schema.transactions.occurredAt, startDate, endDate)))
-                .groupBy(schema.transactions.assetId)
+                .groupBy(schema.transactions.assetId, schema.assets.name)
                 .orderBy(desc(sql`sum(${schema.transactions.totalAmount})`));
 
             const debtTxs = txs.filter(t => ['LOAN_GIVEN', 'LOAN_RECEIVED', 'DEBT_PAYMENT'].includes(t.type));

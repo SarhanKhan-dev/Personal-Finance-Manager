@@ -7,8 +7,8 @@ const inter = Inter({ subsets: ["latin"], variable: '--font-inter' });
 const montserrat = Montserrat({ subsets: ["latin"], variable: '--font-montserrat', weight: ['400', '700', '900'] });
 
 export const metadata = {
-    title: "CM ANALYTICS | Executive Dashboard",
-    description: "Advanced Financial Analytics System",
+    title: "Personal Finance",
+    description: "Your personal financial management system",
 };
 
 export default function RootLayout({ children }) {
