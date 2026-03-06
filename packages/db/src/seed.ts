@@ -17,11 +17,12 @@ async function seed() {
 
     // 1. Create default user
     const [user] = await db.insert(schema.users).values({
+        id: 'default-user-id',
         name: 'Default User',
         email: 'user@example.com',
-    }).returning();
+    } as any).onConflictDoNothing().returning();
 
-    console.log('Created User:', user.name);
+    console.log('Created User:', user?.name || 'Already Exists');
 
     // 2. Create sample Sources
     await db.insert(schema.sources).values([
