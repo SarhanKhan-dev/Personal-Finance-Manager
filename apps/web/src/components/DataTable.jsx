@@ -18,7 +18,7 @@ export const DataTable = ({ columns, data, className }) => {
                     </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-50">
-                    {data.map((row, rowIdx) => (
+                    {(Array.isArray(data) ? data : []).map((row, rowIdx) => (
                         <tr
                             key={row.id || rowIdx}
                             className="group hover:bg-slate-50/50 transition-all duration-300"

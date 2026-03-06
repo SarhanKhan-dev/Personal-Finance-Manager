@@ -41,10 +41,11 @@ export default function DebtsPage() {
     });
 
     const isLoading = isSummaryLoading || (activeTab === 'RECEIVABLES' ? isRecLoading : isPayLoading);
-    const items = activeTab === 'RECEIVABLES' ? (receivablesData?.items || []) : (payablesData?.items || []);
+    const rawItems = activeTab === 'RECEIVABLES' ? (receivablesData?.items || []) : (payablesData?.items || []);
+    const items = Array.isArray(rawItems) ? rawItems : [];
 
     const filteredItems = items.filter(i =>
-        i.personName.toLowerCase().includes(search.toLowerCase())
+        i?.personName?.toLowerCase()?.includes(search.toLowerCase())
     );
 
     return (

@@ -41,8 +41,15 @@ export default function ReportsPage() {
 
     const { incomeItems = [], expenseItems = [], categoryBreakdown = [], merchantBreakdown = [], assetBreakdown = [], debtMovement = [] } = report || {};
 
-    const totalIncome = incomeItems.reduce((acc, i) => acc + i.amount, 0);
-    const totalExpense = expenseItems.reduce((acc, i) => acc + i.amount, 0);
+    const safeIncome = Array.isArray(incomeItems) ? incomeItems : [];
+    const safeExpense = Array.isArray(expenseItems) ? expenseItems : [];
+    const safeCatBreakdown = Array.isArray(categoryBreakdown) ? categoryBreakdown : [];
+    const safeMerchBreakdown = Array.isArray(merchantBreakdown) ? merchantBreakdown : [];
+    const safeAssetBreakdown = Array.isArray(assetBreakdown) ? assetBreakdown : [];
+    const safeDebtMovement = Array.isArray(debtMovement) ? debtMovement : [];
+
+    const totalIncome = safeIncome.reduce((acc, i) => acc + (i?.amount || 0), 0);
+    const totalExpense = safeExpense.reduce((acc, i) => acc + (i?.amount || 0), 0);
     const net = totalIncome - totalExpense;
 
     return (
@@ -74,9 +81,9 @@ export default function ReportsPage() {
                                 <div className="px-2 py-0.5 bg-emerald-500/20 text-emerald-400 rounded-lg text-[8px] font-black uppercase tracking-widest border border-emerald-500/10">SYNCED</div>
                             </div>
                             <p className="text-lg md:text-xl font-black text-slate-100 leading-tight tracking-tight">
-                                During this period, you earned <span className="text-emerald-400 font-black">PKR {totalIncome.toLocaleString()}</span> from <span className="underline decoration-slate-700 underline-offset-8 decoration-2">{incomeItems.length} sources</span>.
+                                During this period, you earned <span className="text-emerald-400 font-black">PKR {totalIncome.toLocaleString()}</span> from <span className="underline decoration-slate-700 underline-offset-8 decoration-2">{safeIncome.length} sources</span>.
                                 Total spending was <span className="text-rose-400 font-black">PKR {totalExpense.toLocaleString()}</span>, leaving you with a net balance of <span className={cn("font-black underline decoration-2 underline-offset-8", net >= 0 ? "text-emerald-400 decoration-emerald-900" : "text-rose-400 decoration-rose-900")}>PKR {Math.abs(net).toLocaleString()}</span>.
-                                Most of your spending went to <span className="text-blue-400">{categoryBreakdown[0]?.name || 'N/A'}</span>.
+                                Most of your spending went to <span className="text-blue-400">{safeCatBreakdown[0]?.name || 'N/A'}</span>.
                             </p>
                         </div>
                     </div>
@@ -99,7 +106,7 @@ export default function ReportsPage() {
                             <Badge className="bg-slate-50 text-slate-400 border-none font-black text-[8px] uppercase tracking-widest h-7 px-3">{categoryBreakdown.length} Categories</Badge>
                         </div>
                         <div className="p-8 space-y-6">
-                            {categoryBreakdown.map((cat, i) => (
+                            {safeCatBreakdown.map((cat, i) => (
                                 <div key={i} className="group">
                                     <div className="flex justify-between items-end mb-3">
                                         <div className="space-y-1">
@@ -143,7 +150,7 @@ export default function ReportsPage() {
                             <Badge className="bg-slate-50 text-slate-400 border-none font-black text-[9px] uppercase tracking-widest h-8 px-4">{merchantBreakdown.length} Merchants</Badge>
                         </div>
                         <div className="p-10 space-y-8">
-                            {merchantBreakdown.map((m, i) => (
+                            {safeMerchBreakdown.map((m, i) => (
                                 <div key={i} className="group">
                                     <div className="flex justify-between items-end mb-3">
                                         <div className="space-y-1">
@@ -184,7 +191,7 @@ export default function ReportsPage() {
                             <h3 className="text-[10px] font-black uppercase tracking-[0.4em] text-slate-400">Spending by Account</h3>
                         </div>
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                            {assetBreakdown.map((a, i) => (
+                            {safeAssetBreakdown.map((a, i) => (
                                 <div key={i} className="p-6 bg-slate-50 rounded-2xl border border-slate-100/50 group hover:bg-white hover:shadow-xl transition-all">
                                     <span className="text-[8px] font-black text-slate-300 uppercase tracking-tighter block mb-1">ACCOUNT: {a.type}</span>
                                     <span className="text-sm font-black text-slate-900 group-hover:text-blue-600 transition-colors block leading-tight">{a.name}</span>
@@ -203,7 +210,7 @@ export default function ReportsPage() {
                             <h3 className="text-[10px] font-black uppercase tracking-[0.4em] text-slate-400">Debt Activity</h3>
                         </div>
                         <div className="space-y-4">
-                            {debtMovement.map((d, i) => (
+                            {safeDebtMovement.map((d, i) => (
                                 <div key={i} className="flex items-center justify-between p-4 bg-slate-50/50 rounded-2xl group">
                                     <div className="flex items-center gap-4">
                                         <div className={cn("w-12 h-12 rounded-xl flex items-center justify-center", d.type === 'LENT' || d.type === 'RECEIVED_BACK' ? 'bg-emerald-50 text-emerald-500' : 'bg-rose-50 text-rose-500')}>

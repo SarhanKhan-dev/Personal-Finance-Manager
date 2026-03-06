@@ -18,11 +18,17 @@ export default function TransactionModal({ isOpen, onClose, onSuccess }) {
     const queryClient = useQueryClient();
 
     // Data Fetching
-    const { data: assets = [] } = useQuery({ queryKey: ['assets'], queryFn: fetchAssets, enabled: isOpen });
-    const { data: owners = [] } = useQuery({ queryKey: ['owners'], queryFn: fetchOwners, enabled: isOpen });
-    const { data: people = [] } = useQuery({ queryKey: ['people'], queryFn: () => fetchPeople(), enabled: isOpen });
-    const { data: categories = [] } = useQuery({ queryKey: ['categories'], queryFn: fetchCategories, enabled: isOpen });
-    const { data: merchants = [] } = useQuery({ queryKey: ['merchants'], queryFn: fetchMerchants, enabled: isOpen });
+    const { data: assetsData } = useQuery({ queryKey: ['assets'], queryFn: fetchAssets, enabled: isOpen });
+    const { data: ownersData } = useQuery({ queryKey: ['owners'], queryFn: fetchOwners, enabled: isOpen });
+    const { data: peopleData } = useQuery({ queryKey: ['people'], queryFn: () => fetchPeople(), enabled: isOpen });
+    const { data: categoriesData } = useQuery({ queryKey: ['categories'], queryFn: fetchCategories, enabled: isOpen });
+    const { data: merchantsData } = useQuery({ queryKey: ['merchants'], queryFn: fetchMerchants, enabled: isOpen });
+
+    const assets = Array.isArray(assetsData) ? assetsData : [];
+    const owners = Array.isArray(ownersData) ? ownersData : [];
+    const people = Array.isArray(peopleData) ? peopleData : (peopleData?.people || []);
+    const categories = Array.isArray(categoriesData) ? categoriesData : (categoriesData?.categories || []);
+    const merchants = Array.isArray(merchantsData) ? merchantsData : (merchantsData?.merchants || []);
 
     // Core State
     const [txType, setTxType] = useState('EXPENSE');
@@ -178,7 +184,7 @@ export default function TransactionModal({ isOpen, onClose, onSuccess }) {
                         <div className="p-10 lg:p-12 space-y-12 bg-white max-h-[60vh] overflow-y-auto CustomScrollbar">
                             {/* Type Selector */}
                             <div className="flex p-1.5 bg-slate-100 rounded-2xl gap-1.5 border border-slate-200/50">
-                                {txOptions.map(t => (
+                                {Array.isArray(txOptions) && txOptions.map(t => (
                                     <button
                                         key={t.id} type="button" onClick={() => setTxType(t.id)}
                                         className={cn(
@@ -271,7 +277,7 @@ export default function TransactionModal({ isOpen, onClose, onSuccess }) {
                                                         className="w-full h-14 bg-white border-slate-100 rounded-xl px-6 font-black text-slate-700 focus:ring-4 focus:ring-slate-950/5 outline-none appearance-none cursor-pointer text-xs"
                                                     >
                                                         <option value="">Select Person</option>
-                                                        {people.map(p => <option key={p.id} value={p.id}>{p.name.toUpperCase()}</option>)}
+                                                        {people.map(p => <option key={p.id} value={p.id}>{p?.name?.toUpperCase()}</option>)}
                                                     </select>
                                                 </div>
                                             )}
@@ -283,7 +289,7 @@ export default function TransactionModal({ isOpen, onClose, onSuccess }) {
                                                         value={assetId} onChange={e => setAssetId(e.target.value)} required
                                                         className="w-full h-14 bg-white border-slate-100 rounded-xl px-6 font-black text-slate-700 focus:ring-4 focus:ring-slate-950/5 outline-none appearance-none cursor-pointer text-xs"
                                                     >
-                                                        {assets.map(a => <option key={a.id} value={a.id}>{a.name.toUpperCase()} ({a.type})</option>)}
+                                                        {assets.map(a => <option key={a.id} value={a.id}>{a?.name?.toUpperCase()} ({a.type})</option>)}
                                                     </select>
                                                 </div>
                                             )}
@@ -321,10 +327,10 @@ export default function TransactionModal({ isOpen, onClose, onSuccess }) {
                                                         >
                                                             <option value="">Destination</option>
                                                             <optgroup label="Assets">
-                                                                {assets.map(a => <option key={a.id} value={`asset:${a.id}`}>{a.name.toUpperCase()}</option>)}
+                                                                {assets.map(a => <option key={a.id} value={`asset:${a.id}`}>{a?.name?.toUpperCase()}</option>)}
                                                             </optgroup>
                                                             <optgroup label="Owners">
-                                                                {owners.map(o => <option key={o.id} value={`owner:${o.id}`}>{o.name.toUpperCase()}</option>)}
+                                                                {owners.map(o => <option key={o.id} value={`owner:${o.id}`}>{o?.name?.toUpperCase()}</option>)}
                                                             </optgroup>
                                                         </select>
                                                     </div>
@@ -345,7 +351,7 @@ export default function TransactionModal({ isOpen, onClose, onSuccess }) {
                                                         className="w-full h-14 bg-white border-slate-100 rounded-xl px-6 font-black text-slate-700 outline-none appearance-none text-xs"
                                                     >
                                                         <option value="">Select Category</option>
-                                                        {categories.map(c => <option key={c.id} value={c.name}>{c.name.toUpperCase()}</option>)}
+                                                        {categories.map(c => <option key={c.id} value={c.name}>{c?.name?.toUpperCase()}</option>)}
                                                     </select>
                                                 </div>
                                                 <div className="space-y-3">
@@ -358,7 +364,7 @@ export default function TransactionModal({ isOpen, onClose, onSuccess }) {
                                                         className="w-full h-14 bg-white border-slate-100 rounded-xl px-6 font-black text-slate-700 outline-none appearance-none text-xs"
                                                     >
                                                         <option value="">None / Direct</option>
-                                                        {merchants.map(m => <option key={m.id} value={m.name}>{m.name.toUpperCase()}</option>)}
+                                                        {merchants.map(m => <option key={m.id} value={m.name}>{m?.name?.toUpperCase()}</option>)}
                                                     </select>
                                                 </div>
                                             </div>
@@ -389,7 +395,7 @@ export default function TransactionModal({ isOpen, onClose, onSuccess }) {
                                                                     }}
                                                                     className="flex-1 h-full bg-transparent font-black text-slate-700 outline-none appearance-none cursor-pointer uppercase text-[10px]"
                                                                 >
-                                                                    {owners.map(o => <option key={o.id} value={o.id}>{o.name.toUpperCase()}</option>)}
+                                                                    {owners.map(o => <option key={o.id} value={o.id}>{o?.name?.toUpperCase()}</option>)}
                                                                 </select>
                                                             </div>
                                                             <div className="w-32 relative group/val">

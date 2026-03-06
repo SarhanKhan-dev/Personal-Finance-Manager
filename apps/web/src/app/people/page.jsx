@@ -24,10 +24,12 @@ export default function PeoplePage() {
     const [modal, setModal] = useState({ open: false, mode: 'create', data: null });
     const [formData, setFormData] = useState({ name: "", phone: "" });
 
-    const { data: people = [], isLoading: isPeopleLoading } = useQuery({
+    const { data: peopleData, isLoading: isPeopleLoading } = useQuery({
         queryKey: ['people', search],
         queryFn: () => fetchPeople(search),
     });
+
+    const people = Array.isArray(peopleData) ? peopleData : (peopleData?.people || []);
 
     const { data: summary } = useQuery({
         queryKey: ['debts-summary'],

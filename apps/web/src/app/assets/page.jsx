@@ -21,10 +21,12 @@ export default function AssetsPage() {
     const { from, to, setFrom, setTo, updateRange, isUpdating: isUpdatingRange } = useDateRange();
     const [isAddModalOpen, setIsAddModalOpen] = useState(false);
 
-    const { data: assets = [], isLoading } = useQuery({
+    const { data: assetsData, isLoading } = useQuery({
         queryKey: ['assets'],
         queryFn: fetchAssets
     });
+
+    const assets = Array.isArray(assetsData) ? assetsData : (assetsData?.assets || []);
 
     const mutation = useMutation({
         mutationFn: createAsset,
@@ -55,7 +57,7 @@ export default function AssetsPage() {
         );
     }
 
-    const totalPortfolio = assets.reduce((acc, a) => acc + Number(a.balance || 0), 0);
+    const totalPortfolio = (Array.isArray(assets) ? assets : []).reduce((acc, a) => acc + Number(a?.balance || 0), 0);
 
     return (
         <div className="flex flex-col min-h-full bg-[#FBFDFF] animate-fade-in relative">

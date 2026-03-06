@@ -8,15 +8,17 @@ import { useQuery } from "@tanstack/react-query";
 import { fetchAssets, fetchSources } from "@/lib/api";
 
 export default function Accounts() {
-    const { data: assets = [], isLoading: loadingAssets } = useQuery({
+    const { data: assetsData, isLoading: loadingAssets } = useQuery({
         queryKey: ['assets'],
         queryFn: fetchAssets
     });
+    const assets = Array.isArray(assetsData) ? assetsData : (assetsData?.assets || []);
 
-    const { data: sources = [], isLoading: loadingSources } = useQuery({
+    const { data: sourcesData, isLoading: loadingSources } = useQuery({
         queryKey: ['sources'],
         queryFn: fetchSources
     });
+    const sources = Array.isArray(sourcesData) ? sourcesData : (sourcesData?.sources || []);
 
     const isLoading = loadingAssets || loadingSources;
 
