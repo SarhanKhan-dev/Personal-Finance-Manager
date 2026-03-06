@@ -1,20 +1,19 @@
-import { createClient } from '@libsql/client';
-import { drizzle } from 'drizzle-orm/libsql';
+import { Client } from 'pg';
+import { drizzle } from 'drizzle-orm/node-postgres';
 import * as schema from './schema';
 import * as dotenv from 'dotenv';
 import * as path from 'path';
 
 dotenv.config({ path: path.join(__dirname, '../../../.env') });
 
-const client = createClient({
-    url: process.env.DATABASE_URL as string,
-    authToken: process.env.DATABASE_AUTH_TOKEN as string,
+const client = new Client({
+    connectionString: process.env.DATABASE_URL || 'postgresql://neondb_owner:npg_gus3koazJ8Zy@ep-odd-recipe-aifowe6z-pooler.c-4.us-east-1.aws.neon.tech/neondb?sslmode=require',
 });
-
-const db = drizzle(client, { schema });
 
 async function seed() {
     console.log('Seeding Database...');
+    await client.connect();
+    const db = drizzle(client, { schema });
 
     // 1. Create default user
     const [user] = await db.insert(schema.users).values({
@@ -73,6 +72,7 @@ async function seed() {
     console.log('Created Categories.');
 
     console.log('Database Seeding Complete!');
+    await client.end();
     process.exit(0);
 }
 

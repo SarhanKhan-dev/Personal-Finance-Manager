@@ -1,4 +1,4 @@
-const BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'https://personal-finance-manager-api.vercel.app';
+const BASE_URL = process.env.NEXT_PUBLIC_API_URL || '';
 
 // --- TRANSACTIONS ---
 export async function fetchTransactions(params = {}) {
