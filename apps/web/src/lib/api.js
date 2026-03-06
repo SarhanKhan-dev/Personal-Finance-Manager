@@ -1,4 +1,8 @@
-const BASE_URL = process.env.NEXT_PUBLIC_API_URL || '';
+let envUrl = process.env.NEXT_PUBLIC_API_URL || '';
+if (envUrl && !envUrl.startsWith('http')) {
+    envUrl = `https://${envUrl}`;
+}
+const BASE_URL = envUrl;
 
 // --- TRANSACTIONS ---
 export async function fetchTransactions(params = {}) {
