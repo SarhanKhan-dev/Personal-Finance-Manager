@@ -8,15 +8,17 @@ export class AssetsService {
     constructor(private readonly dbService: DatabaseService) { }
 
     async findAll(userId: string) {
-        return await this.dbService.db.query.assets.findMany({
+        const assets = await this.dbService.db.query.assets.findMany({
             where: eq(schema.assets.userId, userId),
         });
+        return JSON.parse(JSON.stringify(assets));
     }
 
     async findOne(userId: string, id: string) {
-        return await this.dbService.db.query.assets.findFirst({
+        const asset = await this.dbService.db.query.assets.findFirst({
             where: and(eq(schema.assets.userId, userId), eq(schema.assets.id, id)),
         });
+        return JSON.parse(JSON.stringify(asset));
     }
 
     async create(userId: string, data: { name: string; type: any; allowNegative?: boolean }) {

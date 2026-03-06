@@ -21,16 +21,20 @@ export class CategoriesService {
             .where(eq(schema.transactions.userId, userId))
             .groupBy(schema.transactions.categoryId);
 
-        return {
-            categories,
-            stats: categoryStats
-        };
+        const stats = categoryStats.map(s => ({
+            categoryId: s.categoryId,
+            totalAmount: Number(s.totalAmount) || 0,
+            txCount: Number(s.txCount) || 0
+        }));
+
+        return JSON.parse(JSON.stringify({ categories, stats }));
     }
 
     async findOne(userId: string, id: string) {
-        return await this.dbService.db.query.categories.findFirst({
+        const category = await this.dbService.db.query.categories.findFirst({
             where: and(eq(schema.categories.userId, userId), eq(schema.categories.id, id)),
         });
+        return JSON.parse(JSON.stringify(category));
     }
 
     async create(userId: string, data: { name: string; parentId?: string }) {

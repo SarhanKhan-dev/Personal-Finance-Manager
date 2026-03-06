@@ -8,15 +8,17 @@ export class SourcesService {
     constructor(private readonly dbService: DatabaseService) { }
 
     async findAll(userId: string) {
-        return await this.dbService.db.query.sources.findMany({
+        const sources = await this.dbService.db.query.sources.findMany({
             where: eq(schema.sources.userId, userId),
         });
+        return JSON.parse(JSON.stringify(sources));
     }
 
     async findOne(userId: string, id: string) {
-        return await this.dbService.db.query.sources.findFirst({
+        const source = await this.dbService.db.query.sources.findFirst({
             where: and(eq(schema.sources.userId, userId), eq(schema.sources.id, id)),
         });
+        return JSON.parse(JSON.stringify(source));
     }
 
     async create(userId: string, data: { name: string; type: any; allowNegative?: boolean }) {

@@ -21,16 +21,20 @@ export class MerchantsService {
             .where(eq(schema.transactions.userId, userId))
             .groupBy(schema.transactions.merchantId);
 
-        return {
-            merchants,
-            stats: merchantStats
-        };
+        const stats = merchantStats.map(s => ({
+            merchantId: s.merchantId,
+            totalAmount: Number(s.totalAmount) || 0,
+            txCount: Number(s.txCount) || 0
+        }));
+
+        return JSON.parse(JSON.stringify({ merchants, stats }));
     }
 
     async findOne(userId: string, id: string) {
-        return await this.dbService.db.query.merchants.findFirst({
+        const merchant = await this.dbService.db.query.merchants.findFirst({
             where: and(eq(schema.merchants.userId, userId), eq(schema.merchants.id, id)),
         });
+        return JSON.parse(JSON.stringify(merchant));
     }
 
     async create(userId: string, data: { name: string; defaultCategoryId?: string }) {

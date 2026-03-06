@@ -55,18 +55,31 @@ export class TransactionsService {
             return { ...t, splits, lineItems };
         }));
 
-        const totalResult = await db.select({ count: sql<number>`count(*)` }).from(schema.transactions).where(whereClause);
-        const count = totalResult[0].count;
+        const totalResult = await db.select({ count: sql<string | number>`count(*)` }).from(schema.transactions).where(whereClause);
+        const count = Number(totalResult[0]?.count) || 0;
 
-        // Summary (all in range, not paginated)
-        const allInRange = await db.query.transactions.findMany({ where: whereClause });
+        console.log(`[TransactionsService] Found ${count} total transactions in range`);
+
+        // Summary (all in range, not paginated) - optimized to not fetch full objects
+        const summaryRaw = await db.select({
+            type: schema.transactions.type,
+            amount: schema.transactions.totalAmount
+        }).from(schema.transactions).where(whereClause);
+
         const summary = {
-            totalVolume: allInRange.reduce((acc: number, t: any) => acc + (Number(t.totalAmount) || 0), 0),
-            outflow: allInRange.filter((t: any) => t.type === 'EXPENSE').reduce((acc: number, t: any) => acc + (Number(t.totalAmount) || 0), 0),
-            inflow: allInRange.filter((t: any) => t.type === 'INCOME').reduce((acc: number, t: any) => acc + (Number(t.totalAmount) || 0), 0),
+            totalVolume: summaryRaw.reduce((acc, t) => acc + (Number(t.amount) || 0), 0),
+            outflow: summaryRaw.filter(t => t.type === 'EXPENSE').reduce((acc, t) => acc + (Number(t.amount) || 0), 0),
+            inflow: summaryRaw.filter(t => t.type === 'INCOME').reduce((acc, t) => acc + (Number(t.amount) || 0), 0),
         };
 
-        return { transactions: enrichedTransactions, summary, count };
+        const finalResult = JSON.parse(JSON.stringify({
+            transactions: enrichedTransactions,
+            summary,
+            count
+        }));
+
+        console.log('[TransactionsService] Successfully processed findAll');
+        return finalResult;
     }
 
     async findOne(userId: string, id: string) {
@@ -87,7 +100,7 @@ export class TransactionsService {
         const lineItems = await this.dbService.db.query.transactionLines.findMany({
             where: eq(schema.transactionLines.transactionId, id),
         });
-        return { ...t, splits, lineItems };
+        return JSON.parse(JSON.stringify({ ...t, splits, lineItems }));
     }
 
     async create(userId: string, req: CreateTransactionRequest) {

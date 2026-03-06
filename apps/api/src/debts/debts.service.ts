@@ -20,12 +20,12 @@ export class DebtsService {
             .filter(d => d.kind === 'PAYABLE')
             .reduce((a, d) => a + Number(d.outstandingAmount), 0);
 
-        return {
+        return JSON.parse(JSON.stringify({
             totalReceivableOutstanding: totalReceivable,
             totalPayableOutstanding: totalPayable,
             totalReceivable: debts.filter(d => d.kind === 'RECEIVABLE').reduce((a, d) => a + Number(d.principalAmount), 0),
             totalPayable: debts.filter(d => d.kind === 'PAYABLE').reduce((a, d) => a + Number(d.principalAmount), 0),
-        };
+        }));
     }
 
     async getReceivables(userId: string, page: number = 1, pageSize: number = 20) {
@@ -59,7 +59,8 @@ export class DebtsService {
 
         const result = Array.from(perPerson.values());
         const start = (page - 1) * pageSize;
-        return { items: result.slice(start, start + pageSize), count: result.length };
+        const finalResponse = { items: result.slice(start, start + pageSize), count: result.length };
+        return JSON.parse(JSON.stringify(finalResponse));
     }
 
     async getPayables(userId: string, page: number = 1, pageSize: number = 20) {
@@ -92,7 +93,8 @@ export class DebtsService {
 
         const result = Array.from(perPerson.values());
         const start = (page - 1) * pageSize;
-        return { items: result.slice(start, start + pageSize), count: result.length };
+        const finalResponse = { items: result.slice(start, start + pageSize), count: result.length };
+        return JSON.parse(JSON.stringify(finalResponse));
     }
 
     async getPersonTimeline(userId: string, personId: string) {
@@ -127,7 +129,8 @@ export class DebtsService {
             description: t.description,
         }));
 
-        return { person, debts, timeline };
+        const finalResult = { person, debts, timeline };
+        return JSON.parse(JSON.stringify(finalResult));
     }
 
     async findAll(userId: string) {
@@ -144,13 +147,21 @@ export class DebtsService {
         }).from(schema.debts)
             .where(and(eq(schema.debts.userId, userId), eq(schema.debts.status, 'OPEN')))
             .groupBy(schema.debts.kind);
-        return { debts, stats: totals };
+        const finalStats = totals.map(t => ({
+            kind: t.kind,
+            totalPrincipal: Number(t.totalPrincipal) || 0,
+            totalOutstanding: Number(t.totalOutstanding) || 0,
+            count: Number(t.count) || 0
+        }));
+
+        return JSON.parse(JSON.stringify({ debts, stats: finalStats }));
     }
 
     async findOne(userId: string, id: string) {
-        return await this.dbService.db.query.debts.findFirst({
+        const debt = await this.dbService.db.query.debts.findFirst({
             where: and(eq(schema.debts.userId, userId), eq(schema.debts.id, id)),
             with: { person: true }
         });
+        return JSON.parse(JSON.stringify(debt));
     }
 }

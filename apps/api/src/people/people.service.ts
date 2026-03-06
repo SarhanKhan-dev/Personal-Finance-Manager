@@ -14,13 +14,14 @@ export class PeopleService {
                 ? and(eq(schema.people.userId, userId), like(schema.people.name, `%${search}%`))
                 : eq(schema.people.userId, userId),
         });
-        return people;
+        return JSON.parse(JSON.stringify(people));
     }
 
     async findOne(userId: string, id: string) {
-        return await this.dbService.db.query.people.findFirst({
+        const person = await this.dbService.db.query.people.findFirst({
             where: and(eq(schema.people.userId, userId), eq(schema.people.id, id)),
         });
+        return JSON.parse(JSON.stringify(person));
     }
 
     async create(userId: string, data: { name: string; phone?: string }) {
