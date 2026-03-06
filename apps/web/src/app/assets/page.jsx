@@ -1,5 +1,7 @@
 "use client";
 
+export const dynamic = "force-dynamic";
+
 import {
     Building2, Plus, ChevronRight, Loader2, Info, Landmark,
     CreditCard, Coins, Receipt, ArrowUpRight, ArrowDownLeft,
