@@ -103,8 +103,7 @@ export default function AssetsPage() {
                                 {totalPortfolio.toLocaleString()}
                             </h2>
                             <p className="text-[10px] font-black text-slate-500 uppercase tracking-[0.4em] mt-8 flex items-center gap-3">
-                                <Activity size={14} className="text-emerald-500" />
-                                System Healthy
+                                Financial Overview
                             </p>
                         </div>
 
@@ -114,8 +113,8 @@ export default function AssetsPage() {
                                 <div className="text-2xl font-black text-white tracking-tighter">{assets.length}</div>
                             </div>
                             <div className="p-6 bg-white/5 border border-white/5 rounded-2xl group/card hover:bg-white/10 transition-all">
-                                <p className="text-[8px] font-black text-slate-500 uppercase tracking-widest mb-3">Risk Level</p>
-                                <div className="text-2xl font-black text-emerald-400 tracking-tighter">LOW</div>
+                                <p className="text-[8px] font-black text-slate-500 uppercase tracking-widest mb-3">Latest Sync</p>
+                                <div className="text-[10px] font-black text-emerald-400 tracking-tighter uppercase">JUST NOW</div>
                             </div>
                         </div>
                     </div>

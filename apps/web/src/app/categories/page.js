@@ -53,8 +53,8 @@ export default function CategoriesPage() {
     const categories = data?.categories || [];
     const summary = data?.summary || { totalCount: 0, totalSpend: 0, mostActive: 'N/A', highestSpend: 'N/A' };
 
-    const filteredCategories = categories.filter(c =>
-        c.name.toLowerCase().includes(search.toLowerCase())
+    const filteredCategories = (Array.isArray(categories) ? categories : []).filter(c =>
+        c?.name?.toLowerCase().includes(search.toLowerCase())
     );
 
     const handleSave = () => {
@@ -173,7 +173,8 @@ export default function CategoriesPage() {
                                         </td>
                                         <td className="px-6 py-6 text-right">
                                             <div className="font-black text-xl tracking-tighter text-slate-950">
-                                                <span className="text-[9px] text-slate-300 mr-1.5">PKR</span>0
+                                                <span className="text-[9px] text-slate-300 mr-1.5">PKR</span>
+                                                {(c.stats?.totalAmount || 0).toLocaleString()}
                                             </div>
                                         </td>
                                         <td className="pl-6 pr-8 py-6 text-right">

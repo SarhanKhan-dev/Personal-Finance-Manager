@@ -158,9 +158,8 @@ export default function Dashboard() {
                                     <span className="text-xs font-black text-slate-500">PKR</span>
                                     <h2 className="text-3xl font-black tracking-tighter leading-none">{(summary.totalIncome - summary.totalExpense).toLocaleString()}</h2>
                                 </div>
-                                <p className="text-[8px] font-black text-slate-400 uppercase tracking-[0.2em] mt-2 flex items-center gap-2">
-                                    <div className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
-                                    Active Balance
+                                <p className="text-[10px] font-bold text-slate-500 uppercase tracking-[0.3em] mt-8 flex items-center gap-3">
+                                    Active Financial Summary
                                 </p>
                             </div>
                         </motion.div>
@@ -262,7 +261,7 @@ export default function Dashboard() {
             <div className="mt-auto px-10 py-8 border-t border-slate-50 bg-[#FBFDFF] flex flex-col md:flex-row items-center justify-between text-center md:text-left gap-6 overflow-hidden relative">
                 <div className="flex items-center gap-4 relative z-10">
                     <Globe size={16} className="text-slate-200" />
-                    <p className="text-[10px] font-black text-slate-300 uppercase tracking-[0.4em]">Personal Finance Dashboard // Secure Analytics</p>
+                    <p className="text-[9px] font-black text-slate-300 uppercase tracking-[0.5em]">Personal Finance - Dashboard / Secure Analytics</p>
                 </div>
             </div>
         </div>

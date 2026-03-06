@@ -18,8 +18,19 @@ export class CategoriesController {
         const mostUsedName = categories.find(c => c.id === mostUsedCategory?.categoryId)?.name || 'N/A';
         const highestSpendName = categories.find(c => c.id === highestSpendCategory?.categoryId)?.name || 'N/A';
 
+        const categoriesWithStats = categories.map(c => {
+            const s = stats.find(stat => stat.categoryId === c.id);
+            return {
+                ...c,
+                stats: {
+                    totalAmount: Number(s?.totalAmount) || 0,
+                    txCount: Number(s?.txCount) || 0
+                }
+            };
+        });
+
         return {
-            categories,
+            categories: categoriesWithStats,
             summary: {
                 totalCount: totalCategories,
                 totalSpend: totalCategorizedSpend,

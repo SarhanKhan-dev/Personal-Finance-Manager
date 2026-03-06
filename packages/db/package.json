@@ -9,6 +9,7 @@
         "migrate": "drizzle-kit migrate",
         "push": "drizzle-kit push",
         "seed": "tsx src/seed.ts",
+        "wipe": "tsx src/wipe.ts",
         "build": "tsc",
         "prepare": "npm run build"
     },
@@ -18,7 +19,8 @@
         "@vercel/postgres": "^0.10.0",
         "dotenv": "^16.4.5",
         "drizzle-orm": "^0.38.4",
-        "pg": "^8.20.0"
+        "pg": "^8.20.0",
+        "postgres": "^3.4.8"
     },
     "devDependencies": {
         "@types/pg": "^8.11.6",

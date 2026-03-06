@@ -18,8 +18,19 @@ export class MerchantsController {
         const topFreqName = merchants.find(m => m.id === topMerchantByFreq?.merchantId)?.name || 'N/A';
         const topValueName = merchants.find(m => m.id === topMerchantByValue?.merchantId)?.name || 'N/A';
 
+        const merchantsWithStats = merchants.map(m => {
+            const s = stats.find(stat => stat.merchantId === m.id);
+            return {
+                ...m,
+                stats: {
+                    totalAmount: Number(s?.totalAmount) || 0,
+                    txCount: Number(s?.txCount) || 0
+                }
+            };
+        });
+
         return {
-            merchants,
+            merchants: merchantsWithStats,
             summary: {
                 totalCount,
                 totalVolume,

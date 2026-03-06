@@ -53,8 +53,8 @@ export default function MerchantsPage() {
     const merchants = data?.merchants || [];
     const summary = data?.summary || { totalCount: 0, totalVolume: 0, mostFrequent: 'N/A', highestValue: 'N/A' };
 
-    const filteredMerchants = merchants.filter(m =>
-        m.name.toLowerCase().includes(search.toLowerCase())
+    const filteredMerchants = (Array.isArray(merchants) ? merchants : []).filter(m =>
+        m?.name?.toLowerCase().includes(search.toLowerCase())
     );
 
     const handleSave = () => {
@@ -179,7 +179,7 @@ export default function MerchantsPage() {
                                         </td>
                                         <td className="px-6 py-6 text-right">
                                             <div className="font-black text-xl tracking-tighter text-slate-900">
-                                                0 <span className="text-[9px] font-black text-slate-300 ml-1 uppercase">Logs</span>
+                                                {m.stats?.txCount || 0} <span className="text-[9px] font-black text-slate-300 ml-1 uppercase">Logs</span>
                                             </div>
                                         </td>
                                         <td className="pl-6 pr-8 py-6 text-right">
